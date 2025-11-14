@@ -1,6 +1,12 @@
 -- Migration: Initial Schema
 -- Creates all tables for CivicPulse AI platform
 
+-- Enable PostGIS extension for geographic data types
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Enable UUID generation
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Zones table (must be created first due to foreign key dependencies)
 CREATE TABLE IF NOT EXISTS zones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

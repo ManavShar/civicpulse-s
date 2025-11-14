@@ -5,7 +5,11 @@ npm install
 cd backend
 npm install express socket.io pg ioredis bull bcrypt jsonwebtoken winston cors helmet compression express-rate-limit swagger-jsdoc swagger-ui-express prom-client axios dotenv zod
 npm install -D @types/express @types/node @types/pg @types/bcrypt @types/jsonwebtoken @types/cors @types/compression @types/swagger-jsdoc @types/swagger-ui-express typescript tsx node-pg-migrate
-npm install
+
+Update the Database url in the .env file and run below two commands:
+npm run migrate
+npm run seed
+
 cd ..
 
 # Frontend
