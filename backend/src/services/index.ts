@@ -14,3 +14,9 @@ export {
   initializeWebSocketService,
   getWebSocketService,
 } from "./WebSocketService";
+
+export { SensorService } from "./SensorService";
+export { default as sensorService } from "./SensorService";
+
+export { SensorSimulator } from "./SensorSimulator";
+export { default as sensorSimulator } from "./SensorSimulator";

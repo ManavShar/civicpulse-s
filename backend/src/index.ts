@@ -9,7 +9,8 @@ import { requestIdMiddleware } from "./middleware/requestId";
 import { loggingMiddleware } from "./middleware/loggingMiddleware";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import healthRoutes from "./routes/health";
-import { initializeWebSocketService } from "./services";
+import sensorRoutes from "./routes/sensors";
+import { initializeWebSocketService, sensorService } from "./services";
 
 // Load environment variables
 dotenv.config();
@@ -57,8 +58,8 @@ function createApp(): Application {
   // Health check routes (no /api prefix for infrastructure endpoints)
   app.use(healthRoutes);
 
-  // API routes will be added in subsequent tasks
-  // app.use('/api/v1', apiRoutes);
+  // API v1 routes
+  app.use("/api/v1/sensors", sensorRoutes);
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);
@@ -85,6 +86,26 @@ async function startServer(): Promise<void> {
       connectionCount: wsService.getConnectionCount(),
     });
 
+    // Initialize sensor service
+    await sensorService.initialize();
+
+    // Try to load sensors from database, but don't fail if database is not available
+    try {
+      await sensorService.loadSensors();
+      sensorService.startAllSimulations();
+      logger.info("Sensor service initialized and simulations started");
+    } catch (error) {
+      logger.warn(
+        "Could not load sensors from database - database may not be available yet",
+        {
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+      logger.info(
+        "Server will start without sensor simulations. Sensors can be loaded later."
+      );
+    }
+
     // Start listening
     httpServer.listen(PORT, () => {
       logger.info("CivicPulse AI Backend started", {
@@ -96,13 +117,17 @@ async function startServer(): Promise<void> {
     });
 
     // Graceful shutdown handlers
-    process.on("SIGTERM", () => {
+    process.on("SIGTERM", async () => {
       logger.info("SIGTERM signal received: closing HTTP server");
+      await sensorService.shutdown();
+      await wsService.close();
       process.exit(0);
     });
 
-    process.on("SIGINT", () => {
+    process.on("SIGINT", async () => {
       logger.info("SIGINT signal received: closing HTTP server");
+      await sensorService.shutdown();
+      await wsService.close();
       process.exit(0);
     });
 
