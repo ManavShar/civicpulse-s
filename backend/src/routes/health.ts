@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import logger from "../utils/logger";
 import db from "../db/connection";
+import redisClient from "../db/redis";
 
 const router = Router();
 
@@ -27,17 +28,19 @@ router.get("/ready", async (req: Request, res: Response) => {
     // Check database connection
     const dbHealthy = await db.testConnection();
 
+    // Check Redis connection
+    const redisHealthy = await redisClient.testConnection();
+
     // TODO: Add additional dependency checks in future tasks
-    // - Redis connection check (task 3.3)
     // - Agent service connectivity check (later task)
 
     const checks = {
       database: dbHealthy ? "healthy" : "unhealthy",
-      redis: "pending", // Will be implemented in task 3.3
+      redis: redisHealthy ? "healthy" : "unhealthy",
       agentService: "pending", // Will be implemented later
     };
 
-    const allHealthy = dbHealthy;
+    const allHealthy = dbHealthy && redisHealthy;
 
     if (allHealthy) {
       res.status(200).json({
