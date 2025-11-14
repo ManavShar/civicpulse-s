@@ -10,6 +10,7 @@ import { loggingMiddleware } from "./middleware/loggingMiddleware";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import healthRoutes from "./routes/health";
 import sensorRoutes from "./routes/sensors";
+import incidentRoutes from "./routes/incidents";
 import { initializeWebSocketService, sensorService } from "./services";
 
 // Load environment variables
@@ -60,6 +61,7 @@ function createApp(): Application {
 
   // API v1 routes
   app.use("/api/v1/sensors", sensorRoutes);
+  app.use("/api/v1/incidents", incidentRoutes);
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);

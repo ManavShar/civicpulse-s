@@ -20,3 +20,23 @@ export { default as sensorService } from "./SensorService";
 
 export { SensorSimulator } from "./SensorSimulator";
 export { default as sensorSimulator } from "./SensorSimulator";
+
+export {
+  AnomalyDetector,
+  BaselineStats,
+  AnomalyResult,
+} from "./AnomalyDetector";
+export { default as anomalyDetector } from "./AnomalyDetector";
+
+export { IncidentDetector } from "./IncidentDetector";
+export { default as incidentDetector } from "./IncidentDetector";
+
+export { ScoringService } from "./ScoringService";
+export { default as scoringService } from "./ScoringService";
+
+export {
+  IncidentService,
+  IncidentFilters,
+  IncidentSortOptions,
+} from "./IncidentService";
+export { default as incidentService } from "./IncidentService";
