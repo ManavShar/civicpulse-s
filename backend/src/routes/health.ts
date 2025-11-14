@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import logger from "../utils/logger";
+import db from "../db/connection";
 
 const router = Router();
 
@@ -23,23 +24,34 @@ router.get("/health", (_req: Request, res: Response) => {
  */
 router.get("/ready", async (req: Request, res: Response) => {
   try {
-    // TODO: Add actual dependency checks in future tasks
-    // - Database connection check
-    // - Redis connection check
-    // - Agent service connectivity check
+    // Check database connection
+    const dbHealthy = await db.testConnection();
+
+    // TODO: Add additional dependency checks in future tasks
+    // - Redis connection check (task 3.3)
+    // - Agent service connectivity check (later task)
 
     const checks = {
-      database: "pending", // Will be implemented in task 3.2
+      database: dbHealthy ? "healthy" : "unhealthy",
       redis: "pending", // Will be implemented in task 3.3
       agentService: "pending", // Will be implemented later
     };
 
-    // For now, return ready status
-    res.status(200).json({
-      status: "ready",
-      timestamp: new Date().toISOString(),
-      checks,
-    });
+    const allHealthy = dbHealthy;
+
+    if (allHealthy) {
+      res.status(200).json({
+        status: "ready",
+        timestamp: new Date().toISOString(),
+        checks,
+      });
+    } else {
+      res.status(503).json({
+        status: "not_ready",
+        timestamp: new Date().toISOString(),
+        checks,
+      });
+    }
   } catch (error) {
     logger.error("Readiness check failed", {
       error: error instanceof Error ? error.message : "Unknown error",
