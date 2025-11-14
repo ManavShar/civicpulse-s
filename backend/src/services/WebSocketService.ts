@@ -296,6 +296,56 @@ export class WebSocketService {
   }
 
   /**
+   * Broadcast incident event
+   */
+  public broadcastIncident(
+    action: "created" | "updated" | "resolved",
+    incident: any
+  ): void {
+    const event = `incident:${action}`;
+    this.broadcast(event, incident);
+    logger.debug(`Broadcasted incident ${action}`, {
+      incidentId: incident.id,
+      event,
+    });
+  }
+
+  /**
+   * Broadcast predictions
+   */
+  public broadcastPredictions(predictions: any[]): void {
+    this.broadcast("predictions:updated", predictions);
+    logger.debug("Broadcasted predictions", {
+      count: predictions.length,
+    });
+  }
+
+  /**
+   * Broadcast work order event
+   */
+  public broadcastWorkOrder(
+    action: "created" | "updated" | "completed",
+    workOrder: any
+  ): void {
+    const event = `workorder:${action}`;
+    this.broadcast(event, workOrder);
+    logger.debug(`Broadcasted work order ${action}`, {
+      workOrderId: workOrder.id,
+      event,
+    });
+  }
+
+  /**
+   * Broadcast agent message
+   */
+  public broadcastAgentMessage(message: any): void {
+    this.broadcast("agent:message", message);
+    logger.debug("Broadcasted agent message", {
+      agentType: message.agent_type,
+    });
+  }
+
+  /**
    * Close the WebSocket server
    */
   public async close(): Promise<void> {

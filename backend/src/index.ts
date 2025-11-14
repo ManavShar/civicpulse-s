@@ -11,7 +11,12 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import healthRoutes from "./routes/health";
 import sensorRoutes from "./routes/sensors";
 import incidentRoutes from "./routes/incidents";
-import { initializeWebSocketService, sensorService } from "./services";
+import predictionRoutes from "./routes/predictions";
+import {
+  initializeWebSocketService,
+  sensorService,
+  predictionService,
+} from "./services";
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +67,7 @@ function createApp(): Application {
   // API v1 routes
   app.use("/api/v1/sensors", sensorRoutes);
   app.use("/api/v1/incidents", incidentRoutes);
+  app.use("/api/v1/predictions", predictionRoutes);
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);
@@ -108,6 +114,16 @@ async function startServer(): Promise<void> {
       );
     }
 
+    // Initialize prediction service and schedule recurring predictions
+    try {
+      await predictionService.scheduleRecurringPredictions();
+      logger.info("Prediction service initialized with recurring jobs");
+    } catch (error) {
+      logger.warn("Could not schedule recurring predictions", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+
     // Start listening
     httpServer.listen(PORT, () => {
       logger.info("CivicPulse AI Backend started", {
@@ -122,6 +138,7 @@ async function startServer(): Promise<void> {
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM signal received: closing HTTP server");
       await sensorService.shutdown();
+      await predictionService.close();
       await wsService.close();
       process.exit(0);
     });
@@ -129,6 +146,7 @@ async function startServer(): Promise<void> {
     process.on("SIGINT", async () => {
       logger.info("SIGINT signal received: closing HTTP server");
       await sensorService.shutdown();
+      await predictionService.close();
       await wsService.close();
       process.exit(0);
     });

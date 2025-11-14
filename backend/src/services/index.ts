@@ -40,3 +40,6 @@ export {
   IncidentSortOptions,
 } from "./IncidentService";
 export { default as incidentService } from "./IncidentService";
+
+export { PredictionService } from "./PredictionService";
+export { default as predictionService } from "./PredictionService";
