@@ -8,3 +8,9 @@ export {
   CachePrefix,
   CacheTTL,
 } from "./CacheService";
+
+export {
+  WebSocketService,
+  initializeWebSocketService,
+  getWebSocketService,
+} from "./WebSocketService";
