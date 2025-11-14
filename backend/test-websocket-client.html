@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        h2 {
+            color: #666;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        button.primary {
+            background-color: #007bff;
+            color: white;
+        }
+        button.primary:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        button.secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+        .events {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        .event {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #007bff;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .event-type {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .event-time {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .event-data {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 WebSocket Test Client</h1>
+        
+        <div id="status" class="status disconnected">
+            Disconnected
+        </div>
+
+        <div class="controls">
+            <button class="primary" onclick="connect()">Connect</button>
+            <button class="danger" onclick="disconnect()">Disconnect</button>
+            <button class="secondary" onclick="clearEvents()">Clear Events</button>
+            <button class="secondary" onclick="sendPing()">Send Ping</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Events</div>
+                <div class="stat-value" id="totalEvents">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Sensor Readings</div>
+                <div class="stat-value" id="sensorReadings">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Incidents</div>
+                <div class="stat-value" id="incidents">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Work Orders</div>
+                <div class="stat-value" id="workOrders">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📡 Events</h2>
+        <div id="events" class="events">
+            <p style="color: #666; text-align: center;">No events yet. Connect to start receiving events.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        let eventCounts = {
+            total: 0,
+            sensorReadings: 0,
+            incidents: 0,
+            workOrders: 0
+        };
+
+        function updateStatus(connected) {
+            const statusEl = document.getElementById('status');
+            if (connected) {
+                statusEl.className = 'status connected';
+                statusEl.textContent = 'Connected to WebSocket server';
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.textContent = 'Disconnected';
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalEvents').textContent = eventCounts.total;
+            document.getElementById('sensorReadings').textContent = eventCounts.sensorReadings;
+            document.getElementById('incidents').textContent = eventCounts.incidents;
+            document.getElementById('workOrders').textContent = eventCounts.workOrders;
+        }
+
+        function addEvent(type, data) {
+            eventCounts.total++;
+            
+            if (type.startsWith('sensor:')) eventCounts.sensorReadings++;
+            if (type.startsWith('incident:')) eventCounts.incidents++;
+            if (type.startsWith('workorder:')) eventCounts.workOrders++;
+            
+            updateStats();
+
+            const eventsEl = document.getElementById('events');
+            
+            // Remove placeholder if exists
+            if (eventsEl.children.length === 1 && eventsEl.children[0].tagName === 'P') {
+                eventsEl.innerHTML = '';
+            }
+
+            const eventEl = document.createElement('div');
+            eventEl.className = 'event';
+            eventEl.innerHTML = `
+                <div class="event-type">${type}</div>
+                <div class="event-time">${new Date().toLocaleTimeString()}</div>
+                <div class="event-data">${JSON.stringify(data, null, 2)}</div>
+            `;
+            
+            eventsEl.insertBefore(eventEl, eventsEl.firstChild);
+
+            // Keep only last 50 events
+            while (eventsEl.children.length > 50) {
+                eventsEl.removeChild(eventsEl.lastChild);
+            }
+        }
+
+        function connect() {
+            if (socket && socket.connected) {
+                console.log('Already connected');
+                return;
+            }
+
+            const url = 'http://localhost:3001';
+            console.log('Connecting to', url);
+
+            socket = io(url, {
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                console.log('Connected!');
+                updateStatus(true);
+                addEvent('system', { message: 'Connected to server' });
+            });
+
+            socket.on('disconnect', (reason) => {
+                console.log('Disconnected:', reason);
+                updateStatus(false);
+                addEvent('system', { message: 'Disconnected from server', reason });
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                addEvent('error', { message: 'Connection error', error: error.message });
+            });
+
+            // Listen for all event types
+            socket.on('sensor:reading', (data) => addEvent('sensor:reading', data));
+            socket.on('sensor:anomaly', (data) => addEvent('sensor:anomaly', data));
+            socket.on('incident:created', (data) => addEvent('incident:created', data));
+            socket.on('incident:updated', (data) => addEvent('incident:updated', data));
+            socket.on('incident:resolved', (data) => addEvent('incident:resolved', data));
+            socket.on('workorder:created', (data) => addEvent('workorder:created', data));
+            socket.on('workorder:updated', (data) => addEvent('workorder:updated', data));
+            socket.on('workorder:assigned', (data) => addEvent('workorder:assigned', data));
+            socket.on('workorder:started', (data) => addEvent('workorder:started', data));
+            socket.on('workorder:completed', (data) => addEvent('workorder:completed', data));
+            socket.on('agent:message', (data) => addEvent('agent:message', data));
+            socket.on('agent:plan_created', (data) => addEvent('agent:plan_created', data));
+            socket.on('agent:dispatched', (data) => addEvent('agent:dispatched', data));
+            socket.on('agent:explained', (data) => addEvent('agent:explained', data));
+            socket.on('system:metrics', (data) => addEvent('system:metrics', data));
+            socket.on('scenario:triggered', (data) => addEvent('scenario:triggered', data));
+            socket.on('scenario:stopped', (data) => addEvent('scenario:stopped', data));
+            socket.on('pong', () => addEvent('pong', { message: 'Server responded to ping' }));
+            socket.on('error', (data) => addEvent('error', data));
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateStatus(false);
+            }
+        }
+
+        function clearEvents() {
+            const eventsEl = document.getElementById('events');
+            eventsEl.innerHTML = '<p style="color: #666; text-align: center;">No events yet. Connect to start receiving events.</p>';
+            eventCounts = {
+                total: 0,
+                sensorReadings: 0,
+                incidents: 0,
+                workOrders: 0
+            };
+            updateStats();
+        }
+
+        function sendPing() {
+            if (socket && socket.connected) {
+                socket.emit('ping');
+                console.log('Ping sent');
+            } else {
+                alert('Not connected to server');
+            }
+        }
+
+        // Auto-connect on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, auto-connecting...');
+            connect();
+        });
+    </script>
+</body>
+</html>

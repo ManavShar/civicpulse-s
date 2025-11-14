@@ -1,4 +1,5 @@
 import express, { Application } from "express";
+import { createServer, Server as HTTPServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
@@ -8,6 +9,7 @@ import { requestIdMiddleware } from "./middleware/requestId";
 import { loggingMiddleware } from "./middleware/loggingMiddleware";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import healthRoutes from "./routes/health";
+import { initializeWebSocketService } from "./services";
 
 // Load environment variables
 dotenv.config();
@@ -68,18 +70,28 @@ function createApp(): Application {
 }
 
 /**
- * Start the Express server
+ * Start the Express server with WebSocket support
  */
 async function startServer(): Promise<void> {
   try {
     const app = createApp();
 
+    // Create HTTP server
+    const httpServer: HTTPServer = createServer(app);
+
+    // Initialize WebSocket service
+    const wsService = initializeWebSocketService(httpServer);
+    logger.info("WebSocket service initialized", {
+      connectionCount: wsService.getConnectionCount(),
+    });
+
     // Start listening
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       logger.info("CivicPulse AI Backend started", {
         port: PORT,
         environment: NODE_ENV,
         nodeVersion: process.version,
+        websocketEnabled: true,
       });
     });
 
