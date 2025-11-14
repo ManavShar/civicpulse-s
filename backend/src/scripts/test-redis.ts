@@ -6,7 +6,6 @@
 import dotenv from "dotenv";
 import redisClient from "../db/redis";
 import { cacheService, CachePrefix, CacheTTL } from "../services/CacheService";
-import logger from "../utils/logger";
 
 // Load environment variables
 dotenv.config();
