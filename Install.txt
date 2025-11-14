@@ -1,0 +1,33 @@
+# Root Level
+npm install
+
+# Backend
+cd backend
+npm install express socket.io pg ioredis bull bcrypt jsonwebtoken winston cors helmet compression express-rate-limit swagger-jsdoc swagger-ui-express prom-client axios dotenv zod
+npm install -D @types/express @types/node @types/pg @types/bcrypt @types/jsonwebtoken @types/cors @types/compression @types/swagger-jsdoc @types/swagger-ui-express typescript tsx node-pg-migrate
+npm install
+cd ..
+
+# Frontend
+cd frontend
+npm install react react-dom react-router-dom zustand axios socket.io-client mapbox-gl recharts framer-motion date-fns clsx lucide-react
+npm install -D @types/react @types/react-dom @types/mapbox-gl @typescript-eslint/eslint-plugin @typescript-eslint/parser @vitejs/plugin-react autoprefixer eslint eslint-plugin-react-hooks eslint-plugin-react-refresh postcss tailwindcss @tailwindcss/postcss typescript vite
+npm install
+cd ..
+
+
+# For ml-pipeline
+cd ml-pipeline
+python -m venv venv
+source venv/bin/activate  # On macOS/Linux
+pip install -r requirements.txt
+deactivate
+cd ..
+
+# For agent-runtime
+cd agent-runtime
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
+cd ..
