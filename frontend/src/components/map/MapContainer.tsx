@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Sensor, Incident, GeoPoint, SensorReading, Zone } from "@/types";
-import { createSensorMarker, createIncidentMarker } from "./markers";
+import {
+  Sensor,
+  Incident,
+  WorkOrder,
+  GeoPoint,
+  SensorReading,
+  Zone,
+} from "@/types";
+import {
+  createSensorMarker,
+  createIncidentMarker,
+  createWorkOrderMarker,
+} from "./markers";
 import { MarkerCluster } from "./MarkerCluster";
 import { HeatmapLayer, HeatmapType } from "./HeatmapLayer";
 import { HeatmapControl } from "./HeatmapControl";
-import { SensorPopup, IncidentPopup } from "./MarkerPopup";
+import { SensorPopup, IncidentPopup, WorkOrderPopup } from "./MarkerPopup";
 import { ZoneOverlay } from "./ZoneOverlay";
 import { MapLegend } from "./MapLegend";
 
@@ -16,29 +27,38 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || "";
 interface MapContainerProps {
   sensors: Sensor[];
   incidents: Incident[];
+  workOrders?: WorkOrder[];
   zones?: Zone[];
   heatmapData?: SensorReading[];
   selectedZone?: string | null;
-  onMarkerClick?: (id: string, type: "sensor" | "incident") => void;
+  onMarkerClick?: (
+    id: string,
+    type: "sensor" | "incident" | "workorder"
+  ) => void;
   onZoneClick?: (zoneId: string) => void;
   onIncidentViewDetails?: (incidentId: string) => void;
+  onWorkOrderViewDetails?: (workOrderId: string) => void;
   center?: [number, number];
   zoom?: number;
   showLegend?: boolean;
+  showWorkOrders?: boolean;
 }
 
 export function MapContainer({
   sensors,
   incidents,
+  workOrders = [],
   zones = [],
   heatmapData = [],
   selectedZone,
   onMarkerClick,
   onZoneClick,
   onIncidentViewDetails,
+  onWorkOrderViewDetails,
   center = [-122.4194, 37.7749], // Default to San Francisco
   zoom = 12,
   showLegend = true,
+  showWorkOrders = true,
 }: MapContainerProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -51,7 +71,7 @@ export function MapContainer({
   const [heatmapRadius, setHeatmapRadius] = useState(30);
   const [selectedMarker, setSelectedMarker] = useState<{
     id: string;
-    type: "sensor" | "incident";
+    type: "sensor" | "incident" | "workorder";
     coordinates: [number, number];
   } | null>(null);
 
@@ -117,6 +137,13 @@ export function MapContainer({
 
     updateIncidentMarkers();
   }, [incidents, mapLoaded]);
+
+  // Update work order markers when work orders change
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !showWorkOrders) return;
+
+    updateWorkOrderMarkers();
+  }, [workOrders, mapLoaded, showWorkOrders]);
 
   const updateSensorMarkers = useCallback(() => {
     if (!map.current || !clusterRef.current) return;
@@ -225,7 +252,62 @@ export function MapContainer({
     });
   }, [incidents]);
 
-  const handleMarkerClick = (id: string, type: "sensor" | "incident") => {
+  const updateWorkOrderMarkers = useCallback(() => {
+    if (!map.current) return;
+
+    // Get existing work order marker IDs
+    const existingIds = new Set<string>();
+    markersRef.current.forEach((_, id) => {
+      if (id.startsWith("workorder-")) {
+        existingIds.add(id);
+      }
+    });
+
+    // Track current work order IDs
+    const currentIds = new Set(workOrders.map((wo) => `workorder-${wo.id}`));
+
+    // Remove markers that no longer exist
+    existingIds.forEach((id) => {
+      if (!currentIds.has(id)) {
+        const marker = markersRef.current.get(id);
+        if (marker) {
+          marker.remove();
+          markersRef.current.delete(id);
+        }
+      }
+    });
+
+    // Add or update markers
+    workOrders.forEach((workOrder) => {
+      const markerId = `workorder-${workOrder.id}`;
+      const existingMarker = markersRef.current.get(markerId);
+
+      if (existingMarker) {
+        // Update existing marker
+        const element = existingMarker.getElement();
+        const newElement = createWorkOrderMarker(workOrder, () =>
+          handleMarkerClick(workOrder.id, "workorder")
+        );
+        element.replaceWith(newElement);
+      } else {
+        // Create new marker
+        const element = createWorkOrderMarker(workOrder, () =>
+          handleMarkerClick(workOrder.id, "workorder")
+        );
+
+        const marker = new mapboxgl.Marker({ element, anchor: "center" })
+          .setLngLat(workOrder.location.coordinates)
+          .addTo(map.current!);
+
+        markersRef.current.set(markerId, marker);
+      }
+    });
+  }, [workOrders]);
+
+  const handleMarkerClick = (
+    id: string,
+    type: "sensor" | "incident" | "workorder"
+  ) => {
     // Find the marker coordinates
     let coordinates: [number, number] | null = null;
 
@@ -234,10 +316,15 @@ export function MapContainer({
       if (sensor) {
         coordinates = sensor.location.coordinates;
       }
-    } else {
+    } else if (type === "incident") {
       const incident = incidents.find((i) => i.id === id);
       if (incident) {
         coordinates = incident.location.coordinates;
+      }
+    } else if (type === "workorder") {
+      const workOrder = workOrders.find((wo) => wo.id === id);
+      if (workOrder) {
+        coordinates = workOrder.location.coordinates;
       }
     }
 
@@ -295,7 +382,7 @@ export function MapContainer({
           createRoot(root).render(element);
         });
       }
-    } else {
+    } else if (selectedMarker.type === "incident") {
       const incident = incidents.find((i) => i.id === selectedMarker.id);
       if (incident) {
         const element = (
@@ -316,6 +403,27 @@ export function MapContainer({
           createRoot(root).render(element);
         });
       }
+    } else if (selectedMarker.type === "workorder") {
+      const workOrder = workOrders.find((wo) => wo.id === selectedMarker.id);
+      if (workOrder) {
+        const element = (
+          <WorkOrderPopup
+            workOrder={workOrder}
+            onClose={() => {
+              setSelectedMarker(null);
+              popup.remove();
+            }}
+            onViewDetails={
+              onWorkOrderViewDetails
+                ? () => onWorkOrderViewDetails(workOrder.id)
+                : undefined
+            }
+          />
+        );
+        import("react-dom/client").then(({ createRoot }) => {
+          createRoot(root).render(element);
+        });
+      }
     }
 
     return () => {
@@ -324,7 +432,14 @@ export function MapContainer({
         popupRef.current = null;
       }
     };
-  }, [selectedMarker, sensors, incidents, onIncidentViewDetails]);
+  }, [
+    selectedMarker,
+    sensors,
+    incidents,
+    workOrders,
+    onIncidentViewDetails,
+    onWorkOrderViewDetails,
+  ]);
 
   // Fly to location
   const flyToLocation = useCallback((location: GeoPoint, zoom = 15) => {

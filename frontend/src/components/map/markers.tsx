@@ -1,4 +1,11 @@
-import { Sensor, Incident, SensorType, Severity } from "@/types";
+import {
+  Sensor,
+  Incident,
+  WorkOrder,
+  SensorType,
+  Severity,
+  WorkOrderStatus,
+} from "@/types";
 
 // Sensor type colors and icons
 const SENSOR_COLORS: Record<SensorType, string> = {
@@ -201,6 +208,127 @@ export function createClusterMarker(count: number): HTMLElement {
   el.addEventListener("mouseleave", () => {
     el.style.transform = "scale(1)";
   });
+
+  return el;
+}
+
+// Work order status colors
+const WORK_ORDER_COLORS: Record<WorkOrderStatus, string> = {
+  CREATED: "#6b7280", // gray
+  ASSIGNED: "#3b82f6", // blue
+  IN_PROGRESS: "#f59e0b", // amber
+  COMPLETED: "#10b981", // green
+  CANCELLED: "#ef4444", // red
+};
+
+const WORK_ORDER_ICONS: Record<WorkOrderStatus, string> = {
+  CREATED: "📋",
+  ASSIGNED: "👷",
+  IN_PROGRESS: "⚙️",
+  COMPLETED: "✅",
+  CANCELLED: "❌",
+};
+
+export function createWorkOrderMarker(
+  workOrder: WorkOrder,
+  onClick?: () => void
+): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "workorder-marker";
+
+  const color = WORK_ORDER_COLORS[workOrder.status];
+  const icon = WORK_ORDER_ICONS[workOrder.status];
+
+  el.style.cssText = `
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: ${color};
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  `;
+
+  el.innerHTML = icon;
+
+  // Add priority indicator
+  if (workOrder.priority === "CRITICAL" || workOrder.priority === "HIGH") {
+    const indicator = document.createElement("div");
+    indicator.style.cssText = `
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: ${
+        workOrder.priority === "CRITICAL" ? "#dc2626" : "#f59e0b"
+      };
+      border: 2px solid white;
+    `;
+    el.appendChild(indicator);
+  }
+
+  // Pulse animation for in-progress work orders
+  if (workOrder.status === "IN_PROGRESS") {
+    const pulse = document.createElement("div");
+    pulse.style.cssText = `
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 2px solid ${color};
+      opacity: 0.6;
+      animation: pulse-square 2s infinite;
+    `;
+    el.appendChild(pulse);
+
+    // Add keyframes for square pulse
+    if (!document.getElementById("pulse-square-animation")) {
+      const style = document.createElement("style");
+      style.id = "pulse-square-animation";
+      style.textContent = `
+        @keyframes pulse-square {
+          0% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  // Hover effect
+  el.addEventListener("mouseenter", () => {
+    el.style.transform = "scale(1.15)";
+    el.style.boxShadow = "0 4px 10px rgba(0,0,0,0.4)";
+  });
+
+  el.addEventListener("mouseleave", () => {
+    el.style.transform = "scale(1)";
+    el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+  });
+
+  if (onClick) {
+    el.addEventListener("click", onClick);
+  }
 
   return el;
 }
