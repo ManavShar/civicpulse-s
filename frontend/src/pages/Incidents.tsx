@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentStore } from "@/stores/incidentStore";
 import { IncidentList, IncidentDetail } from "@/components/incidents";
 import { apiClient } from "@/lib/api";
 import { Modal } from "@/components/ui";
 
 export function Incidents() {
-  const [showDetail, setShowDetail] = useState(false);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [showDetail, setShowDetail] = useState(!!id);
   const {
     selectedIncidentId,
     setSelectedIncident,
@@ -19,6 +22,14 @@ export function Incidents() {
   const selectedIncident = selectedIncidentId
     ? getIncidentById(selectedIncidentId)
     : null;
+
+  // Handle deep linking - if ID is in URL, select that incident
+  useEffect(() => {
+    if (id) {
+      setSelectedIncident(id);
+      setShowDetail(true);
+    }
+  }, [id, setSelectedIncident]);
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -39,11 +50,15 @@ export function Incidents() {
   const handleIncidentSelect = (id: string) => {
     setSelectedIncident(id);
     setShowDetail(true);
+    // Update URL for deep linking
+    navigate(`/incidents/${id}`, { replace: true });
   };
 
   const handleCloseDetail = () => {
     setShowDetail(false);
     setSelectedIncident(null);
+    // Clear ID from URL
+    navigate("/incidents", { replace: true });
   };
 
   const handleDismiss = async (id: string) => {

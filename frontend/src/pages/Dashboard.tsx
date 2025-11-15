@@ -9,6 +9,11 @@ import {
   IncidentDistributionChart,
   PredictionConfidenceChart,
 } from "@/components/dashboard";
+import {
+  DashboardLayout,
+  DashboardHeader,
+  DashboardGrid,
+} from "@/components/layout";
 
 export function Dashboard() {
   const { metrics, history } = useMetricsStore();
@@ -26,38 +31,34 @@ export function Dashboard() {
   const samplePredictions = predictions.slice(0, 10);
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Dashboard
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Real-time overview of city operations and infrastructure health
-        </p>
-      </div>
+    <DashboardLayout>
+      <DashboardHeader
+        title="Dashboard"
+        description="Real-time overview of city operations and infrastructure health"
+      />
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Responsive grid */}
       <KPIDashboard metrics={metrics} metricsHistory={history} />
 
       {/* System Metrics */}
       <SystemMetrics metrics={metrics} incidents={incidents} />
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Grid - Responsive breakpoints */}
+      <DashboardGrid columns={2}>
         <IncidentDistributionChart incidents={incidents} />
         <SensorTimeSeriesChart
           readings={sampleSensorReadings}
           title="Recent Sensor Activity"
         />
-      </div>
+      </DashboardGrid>
 
-      {/* Prediction Chart */}
+      {/* Prediction Chart - Full width */}
       {samplePredictions.length > 0 && (
         <PredictionConfidenceChart
           predictions={samplePredictions}
           title="Predictive Analytics"
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

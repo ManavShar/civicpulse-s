@@ -1,19 +1,31 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useWorkOrderStore } from "@/stores/workOrderStore";
 import { WorkOrderList, WorkOrderDetail } from "@/components/workorders";
 import { apiClient } from "@/lib/api";
 import { Modal } from "@/components/ui";
 
 export function WorkOrders() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const {
     selectedWorkOrderId,
+    setSelectedWorkOrder,
     setWorkOrders,
     setLoading,
     setError,
     getWorkOrderById,
   } = useWorkOrderStore();
 
-  const [showDetail, setShowDetail] = useState(false);
+  const [showDetail, setShowDetail] = useState(!!id);
+
+  // Handle deep linking - if ID is in URL, select that work order
+  useEffect(() => {
+    if (id) {
+      setSelectedWorkOrder(id);
+      setShowDetail(true);
+    }
+  }, [id, setSelectedWorkOrder]);
 
   useEffect(() => {
     // Fetch work orders on mount
@@ -33,8 +45,18 @@ export function WorkOrders() {
     fetchWorkOrders();
   }, [setWorkOrders, setLoading, setError]);
 
-  const handleWorkOrderSelect = () => {
+  const handleWorkOrderSelect = (workOrderId: string) => {
+    setSelectedWorkOrder(workOrderId);
     setShowDetail(true);
+    // Update URL for deep linking
+    navigate(`/work-orders/${workOrderId}`, { replace: true });
+  };
+
+  const handleCloseDetail = () => {
+    setShowDetail(false);
+    setSelectedWorkOrder(null);
+    // Clear ID from URL
+    navigate("/work-orders", { replace: true });
   };
 
   const selectedWorkOrder = selectedWorkOrderId
@@ -49,13 +71,13 @@ export function WorkOrders() {
       {showDetail && selectedWorkOrder && (
         <Modal
           isOpen={showDetail}
-          onClose={() => setShowDetail(false)}
+          onClose={handleCloseDetail}
           title="Work Order Details"
           size="lg"
         >
           <WorkOrderDetail
             workOrder={selectedWorkOrder}
-            onClose={() => setShowDetail(false)}
+            onClose={handleCloseDetail}
           />
         </Modal>
       )}

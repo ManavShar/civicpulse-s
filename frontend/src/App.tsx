@@ -26,8 +26,11 @@ function AppContent() {
           <Route index element={<Dashboard />} />
           <Route path="map" element={<MapView />} />
           <Route path="incidents" element={<Incidents />} />
+          <Route path="incidents/:id" element={<Incidents />} />
           <Route path="work-orders" element={<WorkOrders />} />
+          <Route path="work-orders/:id" element={<WorkOrders />} />
           <Route path="predictions" element={<Predictions />} />
+          <Route path="predictions/:sensorId" element={<Predictions />} />
           <Route path="agents" element={<AgentConsole />} />
           <Route path="replay" element={<Replay />} />
           <Route path="scenarios" element={<Scenarios />} />

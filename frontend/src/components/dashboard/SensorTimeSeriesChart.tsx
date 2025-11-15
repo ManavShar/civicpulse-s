@@ -12,6 +12,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { SensorReading } from "@/types";
 import { format } from "date-fns";
+import { useChartTheme } from "@/hooks";
 
 export interface SensorTimeSeriesChartProps {
   readings: SensorReading[];
@@ -26,6 +27,8 @@ export function SensorTimeSeriesChart({
   height = 300,
   showLegend = true,
 }: SensorTimeSeriesChartProps) {
+  const { colors, axis, grid, tooltip } = useChartTheme();
+
   const chartData = useMemo(() => {
     return readings.map((reading) => ({
       timestamp: new Date(reading.timestamp).getTime(),
@@ -38,13 +41,22 @@ export function SensorTimeSeriesChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-medium text-gray-900 dark:text-white">
+        <div
+          className="p-3 rounded-lg shadow-lg border"
+          style={{
+            backgroundColor: tooltip.background,
+            borderColor: tooltip.border,
+          }}
+        >
+          <p className="text-sm font-medium" style={{ color: tooltip.text }}>
             {format(new Date(data.timestamp), "MMM dd, HH:mm:ss")}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm" style={{ color: tooltip.label }}>
             Value:{" "}
-            <span className="font-semibold text-blue-600 dark:text-blue-400">
+            <span
+              className="font-semibold"
+              style={{ color: colors.charts.info }}
+            >
               {data.value.toFixed(2)}
             </span>
           </p>
@@ -74,37 +86,32 @@ export function SensorTimeSeriesChart({
       </h3>
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+          <CartesianGrid {...grid} opacity={0.1} />
           <XAxis
             dataKey="formattedTime"
-            stroke="#6b7280"
+            stroke={axis.stroke}
             style={{ fontSize: "12px" }}
-            tick={{ fill: "#6b7280" }}
+            tick={{ fill: axis.tick }}
           />
           <YAxis
-            stroke="#6b7280"
+            stroke={axis.stroke}
             style={{ fontSize: "12px" }}
-            tick={{ fill: "#6b7280" }}
+            tick={{ fill: axis.tick }}
           />
           <Tooltip content={<CustomTooltip />} />
           {showLegend && (
             <Legend
-              wrapperStyle={{ fontSize: "12px" }}
+              wrapperStyle={{ fontSize: "12px", color: axis.label }}
               iconType="line"
-              formatter={(value) => (
-                <span className="text-gray-700 dark:text-gray-300">
-                  {value}
-                </span>
-              )}
             />
           )}
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#3b82f6"
+            stroke={colors.charts.info}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 6, fill: "#3b82f6" }}
+            activeDot={{ r: 6, fill: colors.charts.info }}
             name="Sensor Value"
           />
         </LineChart>
