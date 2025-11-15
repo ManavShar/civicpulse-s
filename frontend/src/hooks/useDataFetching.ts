@@ -47,7 +47,7 @@ export function useDataFetching() {
         // Fetch incidents
         setIncidentLoading(true);
         const incidentsResponse = await apiClient.incidents.getAll();
-        setIncidents(incidentsResponse.data);
+        setIncidents(incidentsResponse.data.incidents || []);
         setIncidentLoading(false);
       } catch (error: any) {
         console.error("Error fetching incidents:", error);
