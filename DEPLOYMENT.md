@@ -1,6 +1,6 @@
 # CivicPulse AI - Deployment Guide
 
-This guide covers deployment options for CivicPulse AI, from local development to production deployment.
+This guide provides comprehensive instructions for deploying CivicPulse AI in various environments.
 
 ## Table of Contents
 
@@ -8,286 +8,503 @@ This guide covers deployment options for CivicPulse AI, from local development t
 - [Quick Start](#quick-start)
 - [Development Deployment](#development-deployment)
 - [Production Deployment](#production-deployment)
-- [Database Management](#database-management)
-- [Health Monitoring](#health-monitoring)
+- [Docker Configuration](#docker-configuration)
+- [Environment Variables](#environment-variables)
+- [Database Setup](#database-setup)
+- [Monitoring and Health Checks](#monitoring-and-health-checks)
 - [Troubleshooting](#troubleshooting)
+- [Backup and Recovery](#backup-and-recovery)
 
 ## Prerequisites
 
-### Required Software
+### System Requirements
 
-- **Docker** (v20.10+)
-- **Docker Compose** (v2.0+)
-- **Node.js** (v18+) - for local development
-- **Python** (v3.11+) - for local development
+- **Operating System**: Linux, macOS, or Windows with WSL2
+- **CPU**: 4+ cores recommended
+- **RAM**: 8GB minimum, 16GB recommended
+- **Disk Space**: 20GB minimum for Docker images and data
 
-### Required API Keys
+### Software Requirements
 
-- **OpenAI API Key** - for AI agent functionality
-- **Mapbox Token** - for map visualization
+- **Docker**: 20.10+ ([Install Docker](https://docs.docker.com/get-docker/))
+- **Docker Compose**: 2.0+ ([Install Docker Compose](https://docs.docker.com/compose/install/))
+- **Git**: For cloning the repository
+- **curl**: For health checks (usually pre-installed)
+
+### API Keys Required
+
+- **OpenAI API Key**: For agent AI functionality ([Get API Key](https://platform.openai.com/api-keys))
+- **Mapbox Token**: For map visualization ([Get Token](https://account.mapbox.com/access-tokens/))
 
 ## Quick Start
 
-### 1. Initial Setup
+### 1. Clone Repository
 
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd civicpulse-ai
+```
 
-# Run setup script
+### 2. Run Setup Script
+
+```bash
 ./scripts/setup.sh
-
-# Edit .env files with your API keys
-nano .env
 ```
 
-### 2. Start Services
+This will:
+
+- Check prerequisites
+- Create `.env` files from templates
+- Install root dependencies
+
+### 3. Configure Environment
+
+Edit the `.env` files with your API keys:
 
 ```bash
-# Start all services in development mode
-./scripts/start-dev.sh --all
+# Root .env
+OPENAI_API_KEY=sk-...
+VITE_MAPBOX_TOKEN=pk.eyJ1...
 
-# Or start infrastructure only (run services locally)
-./scripts/start-dev.sh
+# backend/.env
+JWT_SECRET=your-secret-key-min-32-chars
+
+# agent-runtime/.env
+OPENAI_API_KEY=sk-...
+
+# frontend/.env
+VITE_MAPBOX_TOKEN=pk.eyJ1...
 ```
 
-### 3. Load Seed Data
-
-```bash
-# Load demo data
-./scripts/seed-data.sh --quick
-
-# Or load full dataset
-./scripts/seed-data.sh
-```
-
-### 4. Access Application
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:4000
-- **Agent Runtime**: http://localhost:8001
-- **ML Pipeline**: http://localhost:8002
-
-## Development Deployment
-
-### Using Docker Compose (Recommended)
-
-Start all services with hot-reloading enabled:
-
-```bash
-docker-compose up
-```
-
-Or in detached mode:
+### 4. Start Services
 
 ```bash
 docker-compose up -d
 ```
 
-### Hybrid Approach (Infrastructure + Local Services)
+### 5. Initialize Database
 
-Start only database and cache with Docker:
+```bash
+# Run migrations
+./scripts/run-migrations.sh
+
+# Load demo data
+./scripts/seed-data.sh --quick
+```
+
+### 6. Verify Deployment
+
+```bash
+./scripts/health-check.sh --verbose
+```
+
+### 7. Access Application
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:4000
+- **API Docs**: http://localhost:4000/api-docs
+
+**Default Login**:
+
+- Email: `admin@civicpulse.ai`
+- Password: `admin123`
+
+## Development Deployment
+
+### Using Docker Compose (Recommended)
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Restart a service
+docker-compose restart backend
+
+# Stop all services
+docker-compose down
+```
+
+### Local Development (Without Docker)
+
+#### 1. Start Infrastructure Services
 
 ```bash
 ./scripts/start-dev.sh
 ```
 
-Then run services locally in separate terminals:
+This starts PostgreSQL and Redis in Docker.
+
+#### 2. Start Application Services
+
+**Terminal 1 - Backend:**
 
 ```bash
-# Terminal 1 - Backend
 cd backend
+npm install
 npm run dev
-
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
-
-# Terminal 3 - Agent Runtime
-cd agent-runtime
-uvicorn main:app --reload --port 8001
-
-# Terminal 4 - ML Pipeline
-cd ml-pipeline
-uvicorn main:app --reload --port 8002
 ```
 
-### Development Commands
+**Terminal 2 - Frontend:**
 
 ```bash
-# View logs
-docker-compose logs -f [service-name]
+cd frontend
+npm install
+npm run dev
+```
 
-# Restart a service
-docker-compose restart [service-name]
+**Terminal 3 - Agent Runtime:**
 
-# Stop all services
-docker-compose down
+```bash
+cd agent-runtime
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8001
+```
 
-# Stop and remove volumes (clean slate)
-docker-compose down -v
+**Terminal 4 - ML Pipeline:**
+
+```bash
+cd ml-pipeline
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8002
 ```
 
 ## Production Deployment
 
-### 1. Configure Environment
-
-Create production `.env` file with secure values:
+### Automated Production Deployment
 
 ```bash
-# Copy example
-cp .env.example .env
-
-# Edit with production values
-nano .env
-```
-
-**Important**: Set strong passwords and secrets for production!
-
-```env
-# Database
-POSTGRES_PASSWORD=<strong-password>
-REDIS_PASSWORD=<strong-password>
-
-# Security
-JWT_SECRET=<random-secret-key>
-
-# API Keys
-OPENAI_API_KEY=<your-key>
-VITE_MAPBOX_TOKEN=<your-token>
-
-# Environment
-NODE_ENV=production
-BUILD_TARGET=production
-```
-
-### 2. Deploy
-
-```bash
-# Run production deployment script
 ./scripts/deploy-prod.sh
 ```
 
 This script will:
 
-- Validate environment configuration
-- Build optimized production images
-- Start services with production settings
-- Run health checks
+1. Validate environment configuration
+2. Build optimized production images
+3. Stop existing containers
+4. Start services in production mode
+5. Perform health checks
+6. Display service URLs
 
-### 3. Run Migrations
+### Manual Production Deployment
+
+#### 1. Configure Production Environment
 
 ```bash
-# Apply database migrations
-./scripts/run-migrations.sh
+cp .env.example .env
 ```
 
-### 4. Load Initial Data
+Edit `.env` with production values:
 
 ```bash
+# Database
+POSTGRES_PASSWORD=<strong-random-password>
+POSTGRES_USER=civicpulse
+POSTGRES_DB=civicpulse
+
+# Redis
+REDIS_PASSWORD=<strong-random-password>
+
+# Backend
+NODE_ENV=production
+JWT_SECRET=<strong-random-secret-min-32-chars>
+JWT_EXPIRES_IN=24h
+
+# API Keys
+OPENAI_API_KEY=sk-...
+VITE_MAPBOX_TOKEN=pk.eyJ1...
+
+# URLs (adjust for your domain)
+VITE_API_URL=https://api.yourdomain.com
+VITE_WS_URL=wss://api.yourdomain.com
+CORS_ORIGIN=https://yourdomain.com
+```
+
+#### 2. Build Production Images
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+```
+
+#### 3. Start Production Services
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+#### 4. Initialize Database
+
+```bash
+./scripts/run-migrations.sh
+./scripts/seed-data.sh
+```
+
+#### 5. Verify Deployment
+
+```bash
+./scripts/health-check.sh --watch
+```
+
+### Production Considerations
+
+#### Security
+
+1. **Use Strong Passwords**
+
+   ```bash
+   # Generate secure passwords
+   openssl rand -base64 32
+   ```
+
+2. **Enable HTTPS**
+
+   - Use a reverse proxy (nginx, traefik, caddy)
+   - Obtain SSL certificates (Let's Encrypt)
+   - Configure CORS properly
+
+3. **Secure Environment Variables**
+
+   - Never commit `.env` files
+   - Use secrets management (Docker secrets, Kubernetes secrets)
+   - Rotate credentials regularly
+
+4. **Network Security**
+   - Use firewall rules
+   - Limit exposed ports
+   - Use private networks for inter-service communication
+
+#### Performance
+
+1. **Resource Limits**
+
+   Add to `docker-compose.prod.yml`:
+
+   ```yaml
+   services:
+     backend:
+       deploy:
+         resources:
+           limits:
+             cpus: "2.0"
+             memory: 2G
+           reservations:
+             cpus: "1.0"
+             memory: 1G
+   ```
+
+2. **Database Optimization**
+
+   - Configure connection pooling
+   - Add appropriate indexes
+   - Regular VACUUM and ANALYZE
+
+3. **Caching Strategy**
+   - Configure Redis maxmemory policy
+   - Set appropriate TTLs
+   - Monitor cache hit rates
+
+#### Monitoring
+
+1. **Log Aggregation**
+
+   ```bash
+   # View all logs
+   docker-compose logs -f
+
+   # View specific service
+   docker-compose logs -f backend
+
+   # Export logs
+   docker-compose logs > logs.txt
+   ```
+
+2. **Health Monitoring**
+
+   ```bash
+   # Continuous monitoring
+   ./scripts/health-check.sh --watch --interval 10
+   ```
+
+3. **Metrics Collection**
+   - Backend exposes `/metrics` endpoint (Prometheus format)
+   - Configure Prometheus and Grafana for visualization
+
+## Docker Configuration
+
+### Multi-Stage Builds
+
+All Dockerfiles use multi-stage builds for optimization:
+
+- **Base Stage**: Install dependencies
+- **Development Stage**: Include dev tools and hot-reload
+- **Build Stage**: Compile application
+- **Production Stage**: Minimal runtime image
+
+### Build Targets
+
+Specify build target with `BUILD_TARGET` environment variable:
+
+```bash
+# Development (default)
+BUILD_TARGET=development docker-compose up -d
+
+# Production
+BUILD_TARGET=production docker-compose up -d
+```
+
+### Image Optimization
+
+Production images are optimized for:
+
+- **Size**: Multi-stage builds remove build dependencies
+- **Security**: Non-root users, minimal base images
+- **Performance**: Compiled assets, production dependencies only
+
+### Health Checks
+
+All services include health checks:
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+  interval: 30s
+  timeout: 3s
+  retries: 3
+  start_period: 10s
+```
+
+## Environment Variables
+
+### Required Variables
+
+| Variable            | Description               | Example                   |
+| ------------------- | ------------------------- | ------------------------- |
+| `OPENAI_API_KEY`    | OpenAI API key for agents | `sk-...`                  |
+| `VITE_MAPBOX_TOKEN` | Mapbox access token       | `pk.eyJ1...`              |
+| `POSTGRES_PASSWORD` | Database password         | `secure_password`         |
+| `JWT_SECRET`        | JWT signing secret        | `min-32-character-secret` |
+
+### Optional Variables
+
+| Variable         | Default       | Description          |
+| ---------------- | ------------- | -------------------- |
+| `NODE_ENV`       | `development` | Environment mode     |
+| `POSTGRES_USER`  | `civicpulse`  | Database user        |
+| `POSTGRES_DB`    | `civicpulse`  | Database name        |
+| `POSTGRES_PORT`  | `5432`        | Database port        |
+| `BACKEND_PORT`   | `4000`        | Backend API port     |
+| `FRONTEND_PORT`  | `3000`        | Frontend port        |
+| `AGENT_PORT`     | `8001`        | Agent runtime port   |
+| `ML_PORT`        | `8002`        | ML pipeline port     |
+| `LOG_LEVEL`      | `info`        | Logging level        |
+| `JWT_EXPIRES_IN` | `24h`         | JWT token expiration |
+
+### Environment Files
+
+Each service has its own `.env` file:
+
+- **Root `.env`**: Shared configuration
+- **`backend/.env`**: Backend-specific config
+- **`frontend/.env`**: Frontend-specific config
+- **`agent-runtime/.env`**: Agent runtime config
+- **`ml-pipeline/.env`**: ML pipeline config
+
+## Database Setup
+
+### Initial Setup
+
+```bash
+# Run migrations
+./scripts/run-migrations.sh
+
 # Load seed data
 ./scripts/seed-data.sh
 ```
 
-### Production Commands
+### Migration Management
 
-```bash
-# Start services
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+Migrations are SQL files in `backend/migrations/`:
 
-# View logs
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
-
-# Stop services
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
-
-# Update and restart
-git pull origin main
-./scripts/deploy-prod.sh
+```
+backend/migrations/
+├── 1700000000000_initial-schema.sql
+├── 1700000001000_create-users-table.sql
+└── ...
 ```
 
-## Database Management
+**Naming Convention**: `TIMESTAMP_description.sql`
 
-### Running Migrations
+**Creating New Migration**:
 
 ```bash
-# Run all pending migrations
+# Create new migration file
+touch backend/migrations/$(date +%s)000_add-new-feature.sql
+
+# Edit the file with SQL commands
+# Run migrations
 ./scripts/run-migrations.sh
 ```
 
-Migration files should be placed in `backend/migrations/` with naming convention:
-
-```
-YYYYMMDDHHMMSS_description.sql
-```
-
-### Seeding Data
+### Seed Data
 
 ```bash
 # Quick demo setup (minimal data)
 ./scripts/seed-data.sh --quick
 
-# Full seed (comprehensive dataset)
+# Full seed (all data)
 ./scripts/seed-data.sh
 
-# Reset and seed (WARNING: deletes all data)
+# Reset and reseed
 ./scripts/seed-data.sh --reset
 ```
 
-### Database Backup
+### Database Access
 
 ```bash
-# Backup database
+# Connect to PostgreSQL
+docker exec -it civicpulse-postgres psql -U civicpulse -d civicpulse
+
+# Run SQL query
+docker exec civicpulse-postgres psql -U civicpulse -d civicpulse -c "SELECT COUNT(*) FROM sensors;"
+
+# Dump database
 docker exec civicpulse-postgres pg_dump -U civicpulse civicpulse > backup.sql
 
 # Restore database
 docker exec -i civicpulse-postgres psql -U civicpulse civicpulse < backup.sql
 ```
 
-### Direct Database Access
-
-```bash
-# Connect to PostgreSQL
-docker exec -it civicpulse-postgres psql -U civicpulse -d civicpulse
-
-# Connect to Redis
-docker exec -it civicpulse-redis redis-cli
-```
-
-## Health Monitoring
+## Monitoring and Health Checks
 
 ### Health Check Script
 
 ```bash
-# Single health check
+# Single check
 ./scripts/health-check.sh
 
-# Verbose output with resource usage
+# Verbose output
 ./scripts/health-check.sh --verbose
 
-# Continuous monitoring (refresh every 5s)
+# Continuous monitoring
 ./scripts/health-check.sh --watch
 
-# Custom refresh interval
+# Custom interval (seconds)
 ./scripts/health-check.sh --watch --interval 10
 ```
 
-### Manual Health Checks
+### Service Health Endpoints
 
-```bash
-# Check individual services
-curl http://localhost:4000/health    # Backend
-curl http://localhost:8001/health    # Agent Runtime
-curl http://localhost:8002/health    # ML Pipeline
-curl http://localhost:3000           # Frontend
+All services expose `/health` endpoints:
 
-# Check container status
-docker ps
-
-# Check container health
-docker inspect --format='{{.State.Health.Status}}' civicpulse-backend
-```
+- Backend: http://localhost:4000/health
+- Agent Runtime: http://localhost:8001/health
+- ML Pipeline: http://localhost:8002/health
 
 ### Viewing Logs
 
@@ -298,56 +515,94 @@ docker-compose logs -f
 # Specific service
 docker-compose logs -f backend
 
-# Last 100 lines
+# Last N lines
 docker-compose logs --tail=100 backend
 
 # Since timestamp
 docker-compose logs --since 2024-01-01T00:00:00 backend
 ```
 
-## Troubleshooting
-
-### Services Won't Start
+### Resource Monitoring
 
 ```bash
-# Check if ports are already in use
-lsof -i :3000  # Frontend
-lsof -i :4000  # Backend
-lsof -i :5432  # PostgreSQL
-lsof -i :6379  # Redis
-lsof -i :8001  # Agent Runtime
-lsof -i :8002  # ML Pipeline
+# Container stats
+docker stats
 
-# Stop conflicting services or change ports in .env
+# Specific container
+docker stats civicpulse-backend
+
+# Disk usage
+docker system df
+
+# Detailed volume info
+docker system df -v
 ```
 
-### Database Connection Issues
+## Troubleshooting
+
+### Common Issues
+
+#### Services Won't Start
+
+```bash
+# Check logs
+docker-compose logs
+
+# Check specific service
+docker-compose logs backend
+
+# Restart services
+docker-compose restart
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+#### Database Connection Errors
 
 ```bash
 # Check PostgreSQL is running
-docker exec civicpulse-postgres pg_isready -U civicpulse
+docker ps | grep postgres
 
-# Check database logs
+# Check PostgreSQL logs
 docker-compose logs postgres
+
+# Test connection
+docker exec civicpulse-postgres pg_isready -U civicpulse
 
 # Restart PostgreSQL
 docker-compose restart postgres
 ```
 
-### Container Build Failures
+#### Port Conflicts
 
 ```bash
-# Clean build (no cache)
-docker-compose build --no-cache
+# Check what's using a port
+lsof -i :4000  # macOS/Linux
+netstat -ano | findstr :4000  # Windows
 
-# Remove old images
-docker system prune -a
+# Change port in .env
+BACKEND_PORT=4001
 
-# Check disk space
-docker system df
+# Restart services
+docker-compose down
+docker-compose up -d
 ```
 
-### Permission Issues
+#### Out of Memory
+
+```bash
+# Check Docker memory
+docker stats
+
+# Increase Docker memory limit (Docker Desktop settings)
+# Or add resource limits to docker-compose.yml
+
+# Clean up unused resources
+docker system prune -a
+```
+
+#### Permission Errors
 
 ```bash
 # Fix script permissions
@@ -355,117 +610,128 @@ chmod +x scripts/*.sh
 
 # Fix volume permissions
 docker-compose down -v
-docker volume rm civicpulse-postgres-data civicpulse-redis-data civicpulse-ml-models
 docker-compose up -d
 ```
 
-### Memory Issues
+### Debug Mode
+
+Enable debug logging:
 
 ```bash
-# Check Docker resource limits
-docker stats
+# In .env
+LOG_LEVEL=debug
 
-# Increase Docker memory limit in Docker Desktop settings
-# Recommended: 4GB minimum, 8GB for optimal performance
+# Restart services
+docker-compose restart
 ```
 
 ### Reset Everything
 
 ```bash
-# Stop all services
-docker-compose down
-
-# Remove all volumes (WARNING: deletes all data)
+# Stop and remove all containers, networks, volumes
 docker-compose down -v
 
 # Remove all images
-docker rmi $(docker images 'civicpulse*' -q)
+docker-compose down --rmi all
 
 # Start fresh
 ./scripts/setup.sh
-./scripts/start-dev.sh --all
-./scripts/seed-data.sh --quick
+docker-compose up -d
+./scripts/run-migrations.sh
+./scripts/seed-data.sh
 ```
 
-## Environment Variables Reference
+## Backup and Recovery
 
-### Global (.env)
+### Database Backup
 
-```env
-# Node Environment
-NODE_ENV=development|production
-BUILD_TARGET=development|production
+```bash
+# Create backup
+docker exec civicpulse-postgres pg_dump -U civicpulse civicpulse > backup-$(date +%Y%m%d).sql
 
-# Database
-POSTGRES_DB=civicpulse
-POSTGRES_USER=civicpulse
-POSTGRES_PASSWORD=<password>
-POSTGRES_PORT=5432
-
-# Redis
-REDIS_PORT=6379
-REDIS_PASSWORD=<password>
-
-# Backend
-BACKEND_PORT=4000
-JWT_SECRET=<secret>
-JWT_EXPIRES_IN=24h
-LOG_LEVEL=info|debug|error
-
-# Frontend
-FRONTEND_PORT=3000
-VITE_API_URL=http://localhost:4000
-VITE_WS_URL=http://localhost:4000
-VITE_MAPBOX_TOKEN=<token>
-
-# Agent Runtime
-AGENT_PORT=8001
-OPENAI_API_KEY=<key>
-OPENAI_MODEL=gpt-4
-
-# ML Pipeline
-ML_PORT=8002
+# Compressed backup
+docker exec civicpulse-postgres pg_dump -U civicpulse civicpulse | gzip > backup-$(date +%Y%m%d).sql.gz
 ```
 
-## Performance Optimization
+### Database Restore
 
-### Production Optimizations
+```bash
+# Restore from backup
+docker exec -i civicpulse-postgres psql -U civicpulse civicpulse < backup.sql
 
-The production deployment includes:
+# Restore from compressed backup
+gunzip -c backup.sql.gz | docker exec -i civicpulse-postgres psql -U civicpulse civicpulse
+```
 
-- **Multi-stage Docker builds** - Minimal image sizes
-- **Non-root users** - Enhanced security
-- **Health checks** - Automatic restart on failure
-- **Resource limits** - Prevent resource exhaustion
-- **Logging** - Structured logs with rotation
-- **Connection pooling** - Efficient database connections
-- **Caching** - Redis for frequently accessed data
+### Redis Backup
 
-### Scaling Considerations
+```bash
+# Trigger save
+docker exec civicpulse-redis redis-cli SAVE
 
-For high-traffic deployments:
+# Copy backup file
+docker cp civicpulse-redis:/data/dump.rdb ./redis-backup.rdb
+```
 
-1. **Horizontal Scaling**: Run multiple instances behind a load balancer
-2. **Database**: Use managed PostgreSQL (AWS RDS, Google Cloud SQL)
-3. **Cache**: Use managed Redis (AWS ElastiCache, Redis Cloud)
-4. **CDN**: Serve frontend assets via CDN
-5. **Monitoring**: Add APM tools (DataDog, New Relic)
+### Redis Restore
 
-## Security Best Practices
+```bash
+# Stop Redis
+docker-compose stop redis
 
-1. **Never commit secrets** - Use environment variables
-2. **Use strong passwords** - Generate random passwords for production
-3. **Enable HTTPS** - Use reverse proxy (Nginx, Traefik) with SSL
-4. **Regular updates** - Keep dependencies and base images updated
-5. **Network isolation** - Use Docker networks to isolate services
-6. **Backup regularly** - Automate database backups
-7. **Monitor logs** - Set up log aggregation and alerting
+# Copy backup file
+docker cp ./redis-backup.rdb civicpulse-redis:/data/dump.rdb
+
+# Start Redis
+docker-compose start redis
+```
+
+### Volume Backup
+
+```bash
+# Backup all volumes
+docker run --rm \
+  -v civicpulse-postgres-data:/data \
+  -v $(pwd):/backup \
+  alpine tar czf /backup/postgres-data-backup.tar.gz /data
+
+# Restore volume
+docker run --rm \
+  -v civicpulse-postgres-data:/data \
+  -v $(pwd):/backup \
+  alpine tar xzf /backup/postgres-data-backup.tar.gz -C /
+```
+
+### Automated Backups
+
+Create a cron job for automated backups:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add daily backup at 2 AM
+0 2 * * * cd /path/to/civicpulse-ai && docker exec civicpulse-postgres pg_dump -U civicpulse civicpulse | gzip > /backups/civicpulse-$(date +\%Y\%m\%d).sql.gz
+```
+
+## Additional Resources
+
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Redis Documentation](https://redis.io/documentation)
+- [Scripts README](scripts/README.md)
 
 ## Support
 
 For issues or questions:
 
-- Check logs: `docker-compose logs -f`
-- Run health check: `./scripts/health-check.sh --verbose`
-- Review this guide's troubleshooting section
-- Check container status: `docker ps -a`
+1. Check service logs: `docker-compose logs [service]`
+2. Run health check: `./scripts/health-check.sh --verbose`
+3. Review this deployment guide
+4. Check environment configuration
+5. Verify Docker and Docker Compose versions
+
+## License
+
+MIT
