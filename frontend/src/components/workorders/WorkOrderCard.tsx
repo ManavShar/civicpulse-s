@@ -177,13 +177,17 @@ export function WorkOrderCard({
         )}
 
         {/* Location */}
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <MapPinIcon className="w-4 h-4" />
-          <span>
-            {workOrder.location.coordinates[1].toFixed(4)},{" "}
-            {workOrder.location.coordinates[0].toFixed(4)}
-          </span>
-        </div>
+        {workOrder.location?.coordinates &&
+          Array.isArray(workOrder.location.coordinates) &&
+          workOrder.location.coordinates.length >= 2 && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <MapPinIcon className="w-4 h-4" />
+              <span>
+                {workOrder.location.coordinates[1].toFixed(4)},{" "}
+                {workOrder.location.coordinates[0].toFixed(4)}
+              </span>
+            </div>
+          )}
 
         {/* Estimated Completion */}
         {workOrder.estimatedCompletion && (

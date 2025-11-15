@@ -59,7 +59,8 @@ export function useDataFetching() {
         // Fetch work orders
         setWorkOrderLoading(true);
         const workOrdersResponse = await apiClient.workOrders.getAll();
-        setWorkOrders(workOrdersResponse.data);
+        // Backend returns { workOrders: [...], count: ... }
+        setWorkOrders(workOrdersResponse.data.workOrders || []);
         setWorkOrderLoading(false);
       } catch (error: any) {
         console.error("Error fetching work orders:", error);

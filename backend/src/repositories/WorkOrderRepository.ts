@@ -11,6 +11,112 @@ export class WorkOrderRepository extends BaseRepository<WorkOrder> {
   }
 
   /**
+   * Override mapRowToEntity to handle geography column
+   */
+  protected mapRowToEntity(row: any): WorkOrder {
+    const entity = super.mapRowToEntity(row);
+
+    // Parse location GeoJSON if it exists
+    if (row.location_geojson) {
+      try {
+        const geoJson = JSON.parse(row.location_geojson);
+        entity.location = {
+          type: geoJson.type,
+          coordinates: geoJson.coordinates,
+        };
+      } catch (error) {
+        // If parsing fails, set to null
+        entity.location = null as any;
+      }
+    } else if (entity.location && typeof entity.location === "string") {
+      // Fallback: if location is a string, set to null
+      entity.location = null as any;
+    }
+
+    return entity;
+  }
+
+  /**
+   * Override findAll to include ST_AsGeoJSON for location
+   */
+  async findAll(
+    conditions: any[] = [],
+    orderBy: any[] = [],
+    pagination?: any,
+    client?: PoolClient
+  ): Promise<WorkOrder[]> {
+    try {
+      // Build custom query with ST_AsGeoJSON
+      const db = await import("../db/connection");
+      const pool = db.default;
+
+      let query = `
+        SELECT 
+          *,
+          ST_AsGeoJSON(location)::text as location_geojson
+        FROM ${this.tableName}
+      `;
+
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      // Add WHERE conditions
+      if (conditions.length > 0) {
+        const whereClauses = conditions.map((cond) => {
+          if (cond.operator === "IN") {
+            const placeholders = (cond.value as any[])
+              .map(() => `$${paramIndex++}`)
+              .join(", ");
+            params.push(...cond.value);
+            return `${cond.field} IN (${placeholders})`;
+          } else {
+            params.push(cond.value);
+            return `${cond.field} ${cond.operator} $${paramIndex++}`;
+          }
+        });
+        query += ` WHERE ${whereClauses.join(" AND ")}`;
+      }
+
+      // Add ORDER BY
+      if (orderBy.length > 0) {
+        const orderClauses = orderBy.map(
+          (order: any) => `${order.field} ${order.direction || "ASC"}`
+        );
+        query += ` ORDER BY ${orderClauses.join(", ")}`;
+      }
+
+      // Add pagination
+      if (pagination) {
+        if (pagination.limit) {
+          query += ` LIMIT $${paramIndex++}`;
+          params.push(pagination.limit);
+        }
+        if (pagination.offset) {
+          query += ` OFFSET $${paramIndex++}`;
+          params.push(pagination.offset);
+        }
+      }
+
+      let rows: any[];
+      if (client) {
+        const result = await client.query(query, params);
+        rows = result.rows;
+      } else {
+        // pool.query returns rows directly, not a QueryResult object
+        rows = await pool.query(query, params);
+      }
+
+      return rows.map((row: any) => this.mapRowToEntity(row));
+    } catch (error) {
+      const logger = await import("../utils/logger");
+      logger.default.error(`Error finding all ${this.tableName}`, {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Find work orders by status
    */
   async findByStatus(
@@ -284,27 +390,6 @@ export class WorkOrderRepository extends BaseRepository<WorkOrder> {
     });
 
     return counts;
-  }
-
-  /**
-   * Override mapRowToEntity to handle PostGIS geography type
-   */
-  protected mapRowToEntity(row: any): WorkOrder {
-    const entity = super.mapRowToEntity(row);
-
-    // Parse location if it's a string
-    if (typeof entity.location === "string") {
-      const locationStr = entity.location as string;
-      const match = locationStr.match(/POINT\(([^ ]+) ([^ ]+)\)/);
-      if (match) {
-        entity.location = {
-          type: "Point",
-          coordinates: [parseFloat(match[1]), parseFloat(match[2])],
-        };
-      }
-    }
-
-    return entity;
   }
 }
 
