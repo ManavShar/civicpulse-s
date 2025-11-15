@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useIncidentStore } from "@/stores/incidentStore";
 import { IncidentCard } from "./IncidentCard";
@@ -12,20 +12,65 @@ interface IncidentListProps {
 export function IncidentList({ onIncidentSelect }: IncidentListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const {
-    selectedIncidentId,
-    sortBy,
-    sortOrder,
-    loading,
-    error,
-    setFilters,
-    clearFilters,
-    setSortBy,
-    setSortOrder,
-    getSortedIncidents,
-  } = useIncidentStore();
+  const selectedIncidentId = useIncidentStore(
+    (state) => state.selectedIncidentId
+  );
+  const sortBy = useIncidentStore((state) => state.sortBy);
+  const sortOrder = useIncidentStore((state) => state.sortOrder);
+  const loading = useIncidentStore((state) => state.loading);
+  const error = useIncidentStore((state) => state.error);
+  const allIncidents = useIncidentStore((state) => state.incidents) || [];
+  const filters = useIncidentStore((state) => state.filters) || {};
+  const setFilters = useIncidentStore((state) => state.setFilters);
+  const clearFilters = useIncidentStore((state) => state.clearFilters);
+  const setSortBy = useIncidentStore((state) => state.setSortBy);
+  const setSortOrder = useIncidentStore((state) => state.setSortOrder);
 
-  const incidents = getSortedIncidents();
+  // Compute filtered and sorted incidents with useMemo
+  const incidents = useMemo(() => {
+    // Safety check: ensure allIncidents is an array
+    if (!Array.isArray(allIncidents)) {
+      return [];
+    }
+
+    // Filter incidents
+    let filtered = [...allIncidents];
+
+    if (filters.status && filters.status.length > 0) {
+      filtered = filtered.filter((i) => filters.status!.includes(i.status));
+    }
+
+    if (filters.severity && filters.severity.length > 0) {
+      filtered = filtered.filter((i) => filters.severity!.includes(i.severity));
+    }
+
+    if (filters.zoneId) {
+      filtered = filtered.filter((i) => i.zoneId === filters.zoneId);
+    }
+
+    if (filters.category && filters.category.length > 0) {
+      filtered = filtered.filter((i) => filters.category!.includes(i.category));
+    }
+
+    // Sort incidents
+    return filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case "priority":
+          comparison = a.priorityScore - b.priorityScore;
+          break;
+        case "time":
+          comparison =
+            new Date(a.detectedAt).getTime() - new Date(b.detectedAt).getTime();
+          break;
+        case "severity":
+          const severityOrder = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
+          comparison = severityOrder[a.severity] - severityOrder[b.severity];
+          break;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [allIncidents, filters, sortBy, sortOrder]);
 
   // Virtual scrolling setup
   const virtualizer = useVirtualizer({

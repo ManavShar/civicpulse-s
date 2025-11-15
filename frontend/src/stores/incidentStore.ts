@@ -1,11 +1,11 @@
 import { create } from "zustand";
-import { Incident, IncidentStatus, Severity } from "@/types";
+import { Incident, IncidentStatus, Severity, IncidentCategory } from "@/types";
 
 interface IncidentFilters {
   status?: IncidentStatus[];
   severity?: Severity[];
   zoneId?: string;
-  category?: string[];
+  category?: IncidentCategory[];
 }
 
 interface IncidentState {

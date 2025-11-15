@@ -124,32 +124,18 @@ export function MapContainer({
     };
   }, [center, zoom]);
 
-  // Update markers when sensors change
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return;
-
-    updateSensorMarkers();
-  }, [sensors, mapLoaded]);
-
-  // Update incident markers when incidents change
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return;
-
-    updateIncidentMarkers();
-  }, [incidents, mapLoaded]);
-
-  // Update work order markers when work orders change
-  useEffect(() => {
-    if (!map.current || !mapLoaded || !showWorkOrders) return;
-
-    updateWorkOrderMarkers();
-  }, [workOrders, mapLoaded, showWorkOrders]);
-
   const updateSensorMarkers = useCallback(() => {
     if (!map.current || !clusterRef.current) return;
 
     // Safety check: ensure sensors is an array
     const sensorsArray = Array.isArray(sensors) ? sensors : [];
+
+    console.log("Updating sensor markers:", {
+      sensorsCount: sensorsArray.length,
+      mapLoaded: mapLoaded,
+      hasMap: !!map.current,
+      hasCluster: !!clusterRef.current,
+    });
 
     // Get existing sensor marker IDs
     const existingIds = new Set<string>();
@@ -175,6 +161,12 @@ export function MapContainer({
 
     // Add or update markers
     sensorsArray.forEach((sensor) => {
+      // Check if sensor has valid location
+      if (!sensor.location || !sensor.location.coordinates) {
+        console.warn("Sensor missing location:", sensor.id);
+        return;
+      }
+
       const markerId = `sensor-${sensor.id}`;
       const existingMarker = markersRef.current.get(markerId);
 
@@ -196,6 +188,11 @@ export function MapContainer({
           .addTo(map.current!);
 
         markersRef.current.set(markerId, marker);
+        console.log(
+          "Added sensor marker:",
+          markerId,
+          sensor.location.coordinates
+        );
       }
     });
 
@@ -306,6 +303,27 @@ export function MapContainer({
       }
     });
   }, [workOrders]);
+
+  // Update markers when sensors change
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    updateSensorMarkers();
+  }, [sensors, mapLoaded, updateSensorMarkers]);
+
+  // Update incident markers when incidents change
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    updateIncidentMarkers();
+  }, [incidents, mapLoaded, updateIncidentMarkers]);
+
+  // Update work order markers when work orders change
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !showWorkOrders) return;
+
+    updateWorkOrderMarkers();
+  }, [workOrders, mapLoaded, showWorkOrders, updateWorkOrderMarkers]);
 
   const handleMarkerClick = (
     id: string,

@@ -36,7 +36,7 @@ export function Incidents() {
       setLoading(true);
       try {
         const response = await apiClient.incidents.getAll();
-        setIncidents(response.data);
+        setIncidents(response.data.incidents || []);
       } catch (error: any) {
         setError(error.message || "Failed to load incidents");
       } finally {
