@@ -3,7 +3,6 @@
  * This file MUST be imported first before any other modules
  */
 import dotenv from "dotenv";
-import path from "path";
 
 // Load environment variables
 const result = dotenv.config();
