@@ -415,21 +415,26 @@ async function generateHistoricalWorkOrders(
   try {
     console.log("\nGenerating historical work orders...");
 
-    // Get incidents with their details
+    // Get ALL incidents (not just resolved) for better demo variety
     const incidents = await client.query(
       `SELECT i.*, z.name as zone_name
        FROM incidents i
        JOIN zones z ON i.zone_id = z.id
-       WHERE i.id = ANY($1)
-       AND i.status = 'RESOLVED'`,
+       WHERE i.id = ANY($1)`,
       [incidentIds]
     );
 
     let workOrderCount = 0;
+    const statusDistribution = {
+      COMPLETED: 0,
+      IN_PROGRESS: 0,
+      ASSIGNED: 0,
+      CREATED: 0,
+    };
 
     for (const incident of incidents.rows) {
-      // 90% of resolved incidents have work orders
-      if (Math.random() > 0.9) continue;
+      // 85% of incidents have work orders (increased from 90% for better demo)
+      if (Math.random() > 0.85) continue;
 
       const priorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
       const priority =
@@ -440,19 +445,83 @@ async function generateHistoricalWorkOrders(
         incident.detected_at.getTime() + Math.random() * 30 * 60 * 1000
       );
 
-      // Assigned within 15 minutes
-      const assignedAt = new Date(
-        createdAt.getTime() + Math.random() * 15 * 60 * 1000
-      );
+      // Determine status based on incident status and time
+      let status: string;
+      let assignedAt: Date | null = null;
+      let startedAt: Date | null = null;
+      let completedAt: Date | null = null;
+      let estimatedCompletion: Date;
 
-      // Started within 30 minutes of assignment
-      const startedAt = new Date(
-        assignedAt.getTime() + Math.random() * 30 * 60 * 1000
-      );
+      const now = new Date();
+      const isRecent =
+        now.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000; // Last 24 hours
 
-      // Duration based on incident type (15-120 minutes)
-      const duration = 15 + Math.random() * 105;
-      const completedAt = new Date(startedAt.getTime() + duration * 60 * 1000);
+      if (incident.status === "RESOLVED") {
+        // Resolved incidents have completed work orders
+        status = "COMPLETED";
+        assignedAt = new Date(
+          createdAt.getTime() + Math.random() * 15 * 60 * 1000
+        );
+        startedAt = new Date(
+          assignedAt.getTime() + Math.random() * 30 * 60 * 1000
+        );
+        const duration = 15 + Math.random() * 105;
+        completedAt = new Date(startedAt.getTime() + duration * 60 * 1000);
+        estimatedCompletion = completedAt;
+        statusDistribution.COMPLETED++;
+      } else if (isRecent) {
+        // Recent active incidents have various statuses for demo
+        const rand = Math.random();
+        if (rand < 0.4) {
+          // 40% IN_PROGRESS
+          status = "IN_PROGRESS";
+          assignedAt = new Date(
+            createdAt.getTime() + Math.random() * 15 * 60 * 1000
+          );
+          startedAt = new Date(
+            assignedAt.getTime() + Math.random() * 30 * 60 * 1000
+          );
+          estimatedCompletion = new Date(
+            startedAt.getTime() + (30 + Math.random() * 90) * 60 * 1000
+          );
+          statusDistribution.IN_PROGRESS++;
+        } else if (rand < 0.7) {
+          // 30% ASSIGNED
+          status = "ASSIGNED";
+          assignedAt = new Date(
+            createdAt.getTime() + Math.random() * 15 * 60 * 1000
+          );
+          estimatedCompletion = new Date(
+            assignedAt.getTime() + (45 + Math.random() * 90) * 60 * 1000
+          );
+          statusDistribution.ASSIGNED++;
+        } else {
+          // 30% CREATED
+          status = "CREATED";
+          estimatedCompletion = new Date(
+            createdAt.getTime() + (60 + Math.random() * 120) * 60 * 1000
+          );
+          statusDistribution.CREATED++;
+        }
+      } else {
+        // Older active incidents are mostly completed
+        status = "COMPLETED";
+        assignedAt = new Date(
+          createdAt.getTime() + Math.random() * 15 * 60 * 1000
+        );
+        startedAt = new Date(
+          assignedAt.getTime() + Math.random() * 30 * 60 * 1000
+        );
+        const duration = 15 + Math.random() * 105;
+        completedAt = new Date(startedAt.getTime() + duration * 60 * 1000);
+        estimatedCompletion = completedAt;
+        statusDistribution.COMPLETED++;
+      }
+
+      const duration =
+        startedAt && completedAt
+          ? Math.round((completedAt.getTime() - startedAt.getTime()) / 60000)
+          : Math.round(30 + Math.random() * 90);
 
       await client.query(
         `INSERT INTO work_orders (
@@ -465,13 +534,15 @@ async function generateHistoricalWorkOrders(
           incident.id,
           `Resolve ${incident.type.replace(/_/g, " ")}`,
           `Work order for incident at ${incident.zone_name}`,
-          "COMPLETED",
+          status,
           priority,
-          `UNIT-${Math.floor(Math.random() * 20) + 1}`,
+          status !== "CREATED"
+            ? `UNIT-${Math.floor(Math.random() * 20) + 1}`
+            : null,
           incident.location,
           incident.zone_id,
-          Math.round(duration),
-          completedAt,
+          duration,
+          estimatedCompletion,
           startedAt,
           completedAt,
           createdAt,
@@ -483,6 +554,11 @@ async function generateHistoricalWorkOrders(
     }
 
     console.log(`✅ Generated ${workOrderCount} historical work orders`);
+    console.log(`   Status breakdown:`);
+    console.log(`   - CREATED: ${statusDistribution.CREATED}`);
+    console.log(`   - ASSIGNED: ${statusDistribution.ASSIGNED}`);
+    console.log(`   - IN_PROGRESS: ${statusDistribution.IN_PROGRESS}`);
+    console.log(`   - COMPLETED: ${statusDistribution.COMPLETED}`);
   } finally {
     client.release();
   }

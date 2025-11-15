@@ -33,7 +33,8 @@ export function WorkOrders() {
       setLoading(true);
       try {
         const response = await apiClient.workOrders.getAll();
-        setWorkOrders(response.data);
+        // Backend returns { workOrders: [...], count: ... }
+        setWorkOrders(response.data.workOrders || []);
       } catch (error) {
         console.error("Failed to fetch work orders:", error);
         setError("Failed to load work orders");

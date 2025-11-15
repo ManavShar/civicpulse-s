@@ -15,6 +15,7 @@
     "seed:sensors": "tsx src/scripts/seed-sensors.ts",
     "seed:historical": "tsx src/scripts/seed-historical-data.ts",
     "seed:users": "tsx src/scripts/seed-users.ts",
+    "seed:workorders": "tsx src/scripts/reseed-work-orders.ts",
     "seed:quick": "tsx src/scripts/quick-demo-setup.ts",
     "reset": "tsx src/scripts/reset-db.ts",
     "clear:readings": "tsx src/scripts/clear-readings.ts"
