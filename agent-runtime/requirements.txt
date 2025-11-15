@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
 langchain
+langchain-core
 langchain-openai
 redis
 psycopg2-binary

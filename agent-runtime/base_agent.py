@@ -183,12 +183,13 @@ class BaseAgent(ABC):
 
         for attempt in range(max_retries):
             try:
-                # Call LLM with timeout
+                # Call LLM with timeout using ainvoke (LangChain 1.0.x)
                 response = await asyncio.wait_for(
-                    self.llm.agenerate([messages]), timeout=settings.agent_timeout
+                    self.llm.ainvoke(messages), timeout=settings.agent_timeout
                 )
 
-                result = response.generations[0][0].text
+                # In LangChain 1.0.x, ainvoke returns an AIMessage object
+                result = response.content
                 logger.debug(
                     f"{self.agent_type.value} LLM call successful (attempt {attempt + 1})"
                 )

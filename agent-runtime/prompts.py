@@ -2,7 +2,7 @@
 Prompt templates for agent system
 """
 
-from langchain.prompts import (
+from langchain_core.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
