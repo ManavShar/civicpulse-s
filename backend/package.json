@@ -11,6 +11,7 @@
     "migrate:down": "node-pg-migrate down",
     "migrate:create": "node-pg-migrate create",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:users": "tsx src/scripts/seed-users.ts",
     "reset": "tsx src/scripts/reset-db.ts"
   },
   "dependencies": {

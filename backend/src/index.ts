@@ -8,7 +8,9 @@ import logger from "./utils/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { loggingMiddleware } from "./middleware/loggingMiddleware";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { apiLimiter } from "./middleware/rateLimiter";
 import healthRoutes from "./routes/health";
+import authRoutes from "./routes/auth";
 import sensorRoutes from "./routes/sensors";
 import incidentRoutes from "./routes/incidents";
 import predictionRoutes from "./routes/predictions";
@@ -69,7 +71,11 @@ function createApp(): Application {
   // Health check routes (no /api prefix for infrastructure endpoints)
   app.use(healthRoutes);
 
+  // Apply rate limiting to all API routes
+  app.use("/api/", apiLimiter);
+
   // API v1 routes
+  app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/sensors", sensorRoutes);
   app.use("/api/v1/incidents", incidentRoutes);
   app.use("/api/v1/predictions", predictionRoutes);

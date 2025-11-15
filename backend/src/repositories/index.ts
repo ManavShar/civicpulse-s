@@ -10,6 +10,7 @@ export { PredictionRepository } from "./PredictionRepository";
 export { WorkOrderRepository } from "./WorkOrderRepository";
 export { ZoneRepository } from "./ZoneRepository";
 export { AgentLogRepository } from "./AgentLogRepository";
+export { UserRepository } from "./UserRepository";
 
 // Export singleton instances
 import sensorRepository from "./SensorRepository";
