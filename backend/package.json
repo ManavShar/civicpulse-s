@@ -10,8 +10,12 @@
     "migrate": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
     "migrate:create": "node-pg-migrate create",
-    "seed": "tsx src/scripts/seed.ts",
+    "seed": "tsx src/scripts/reset-and-seed.ts",
+    "seed:zones": "tsx src/scripts/seed-zones.ts",
+    "seed:sensors": "tsx src/scripts/seed-sensors.ts",
+    "seed:historical": "tsx src/scripts/seed-historical-data.ts",
     "seed:users": "tsx src/scripts/seed-users.ts",
+    "seed:quick": "tsx src/scripts/quick-demo-setup.ts",
     "reset": "tsx src/scripts/reset-db.ts"
   },
   "dependencies": {
