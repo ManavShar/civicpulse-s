@@ -1,6 +1,6 @@
 # Multi-stage build for CivicPulse AI Agent Runtime
 # Stage 1: Base - Install dependencies
-FROM python:3.11-slim AS base
+FROM python:3.12-slim AS base
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ EXPOSE 8001
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
 
 # Stage 3: Production
-FROM python:3.11-slim AS production
+FROM python:3.12-slim AS production
 
 WORKDIR /app
 
