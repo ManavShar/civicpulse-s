@@ -2,6 +2,7 @@ import {
   Sensor,
   Incident,
   WorkOrder,
+  Prediction,
   SensorType,
   Severity,
   WorkOrderStatus,
@@ -324,6 +325,141 @@ export function createWorkOrderMarker(
   el.addEventListener("mouseleave", () => {
     el.style.transform = "scale(1)";
     el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+  });
+
+  if (onClick) {
+    el.addEventListener("click", onClick);
+  }
+
+  return el;
+}
+
+// Prediction marker with warning indicator
+export function createPredictionMarker(
+  prediction: Prediction,
+  sensor?: Sensor,
+  onClick?: () => void
+): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "prediction-marker";
+
+  // Determine warning level based on confidence and predicted value
+  const isHighConfidence = prediction.confidence >= 0.7;
+  const isWarning = isHighConfidence && prediction.predictedValue > 80;
+
+  const baseColor = sensor ? SENSOR_COLORS[sensor.type] : "#6b7280";
+  const warningColor = isWarning ? "#f59e0b" : baseColor;
+
+  el.style.cssText = `
+    width: 36px;
+    height: 36px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s;
+  `;
+
+  // Create diamond shape for predictions
+  el.innerHTML = `
+    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+      <g transform="rotate(45 18 18)">
+        <rect
+          x="6"
+          y="6"
+          width="24"
+          height="24"
+          fill="${warningColor}"
+          stroke="white"
+          stroke-width="2"
+          opacity="0.8"
+        />
+      </g>
+      <text
+        x="18"
+        y="22"
+        text-anchor="middle"
+        font-size="14"
+        font-weight="bold"
+        fill="white"
+      >P</text>
+    </svg>
+  `;
+
+  // Add warning pulse animation for high-risk predictions
+  if (isWarning) {
+    const pulse = document.createElement("div");
+    pulse.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 36px;
+      height: 36px;
+      background-color: ${warningColor};
+      opacity: 0.4;
+      animation: pulse-prediction 2s infinite;
+      transform: rotate(45deg);
+    `;
+    el.appendChild(pulse);
+
+    // Add keyframes for prediction pulse
+    if (!document.getElementById("pulse-prediction-animation")) {
+      const style = document.createElement("style");
+      style.id = "pulse-prediction-animation";
+      style.textContent = `
+        @keyframes pulse-prediction {
+          0% {
+            transform: rotate(45deg) scale(1);
+            opacity: 0.4;
+          }
+          50% {
+            transform: rotate(45deg) scale(1.3);
+            opacity: 0;
+          }
+          100% {
+            transform: rotate(45deg) scale(1);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  // Add confidence indicator
+  const confidenceIndicator = document.createElement("div");
+  confidenceIndicator.style.cssText = `
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: ${
+      prediction.confidence >= 0.8
+        ? "#10b981"
+        : prediction.confidence >= 0.6
+        ? "#f59e0b"
+        : "#ef4444"
+    };
+    border: 2px solid white;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+  `;
+  confidenceIndicator.textContent = Math.round(
+    prediction.confidence * 100
+  ).toString();
+  el.appendChild(confidenceIndicator);
+
+  // Hover effect
+  el.addEventListener("mouseenter", () => {
+    el.style.transform = "scale(1.15)";
+  });
+
+  el.addEventListener("mouseleave", () => {
+    el.style.transform = "scale(1)";
   });
 
   if (onClick) {
