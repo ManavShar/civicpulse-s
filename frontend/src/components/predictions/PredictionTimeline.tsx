@@ -19,9 +19,12 @@ export function PredictionTimeline({
     const now = new Date();
     const horizons = [1, 6, 12, 24]; // hours
 
+    // Safety check: ensure predictions is an array
+    const predictionsArray = Array.isArray(predictions) ? predictions : [];
+
     return horizons.map((hours) => {
       const targetTime = addHours(now, hours);
-      const relevantPredictions = predictions.filter((pred) => {
+      const relevantPredictions = predictionsArray.filter((pred) => {
         const predTime = new Date(pred.predictedTimestamp);
         const diffHours =
           (predTime.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -146,7 +149,7 @@ export function PredictionTimeline({
             Total Predictions:
           </span>
           <span className="font-semibold text-gray-900 dark:text-white">
-            {predictions.length}
+            {Array.isArray(predictions) ? predictions.length : 0}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm mt-1">
@@ -155,7 +158,7 @@ export function PredictionTimeline({
           </span>
           <span className="font-semibold text-yellow-600 dark:text-yellow-400">
             {
-              predictions.filter(
+              (Array.isArray(predictions) ? predictions : []).filter(
                 (p) => p.confidence >= 0.7 && p.predictedValue > 80
               ).length
             }

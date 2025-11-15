@@ -52,11 +52,14 @@ export function IncidentDistributionChart({
       NOISE_COMPLAINT: 0,
     };
 
-    incidents.forEach((incident) => {
-      if (incident.category in distribution) {
-        distribution[incident.category]++;
-      }
-    });
+    // Safety check: ensure incidents is an array
+    if (Array.isArray(incidents)) {
+      incidents.forEach((incident) => {
+        if (incident.category in distribution) {
+          distribution[incident.category]++;
+        }
+      });
+    }
 
     return Object.entries(distribution).map(([category, count]) => ({
       category: categoryLabels[category as IncidentCategory],

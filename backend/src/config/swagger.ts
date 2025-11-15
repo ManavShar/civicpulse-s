@@ -46,7 +46,7 @@ Authentication endpoints have stricter limits of 5 attempts per 15 minutes.
 ## WebSocket Events
 
 In addition to REST endpoints, the system provides real-time updates via WebSocket connections.
-Connect to \`ws://localhost:3001\` and listen for events like:
+Connect to \`ws://localhost:4000\` and listen for events like:
 
 - \`sensor:reading\` - New sensor data
 - \`incident:created\` - New incident detected
@@ -80,7 +80,7 @@ All error responses follow a consistent format:
     },
     servers: [
       {
-        url: "http://localhost:3001",
+        url: "http://localhost:4000",
         description: "Development server",
       },
       {

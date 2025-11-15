@@ -51,14 +51,18 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
 
   addIncident: (incident) =>
     set((state) => ({
-      incidents: [...state.incidents, incident],
+      incidents: Array.isArray(state.incidents)
+        ? [...state.incidents, incident]
+        : [incident],
     })),
 
   updateIncident: (id, updates) =>
     set((state) => ({
-      incidents: state.incidents.map((incident) =>
-        incident.id === id ? { ...incident, ...updates } : incident
-      ),
+      incidents: Array.isArray(state.incidents)
+        ? state.incidents.map((incident) =>
+            incident.id === id ? { ...incident, ...updates } : incident
+          )
+        : [],
     })),
 
   removeIncident: (id) =>
@@ -86,6 +90,10 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
   // Selectors
   getFilteredIncidents: () => {
     const { incidents, filters } = get();
+
+    // Safety check: ensure incidents is an array
+    if (!Array.isArray(incidents)) return [];
+
     let filtered = [...incidents];
 
     if (filters.status && filters.status.length > 0) {
@@ -132,13 +140,26 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
     });
   },
 
-  getIncidentById: (id) => get().incidents.find((i) => i.id === id),
+  getIncidentById: (id) => {
+    const incidents = get().incidents;
+    return Array.isArray(incidents)
+      ? incidents.find((i) => i.id === id)
+      : undefined;
+  },
 
-  getActiveIncidents: () =>
-    get().incidents.filter((i) => i.status === "ACTIVE"),
+  getActiveIncidents: () => {
+    const incidents = get().incidents;
+    return Array.isArray(incidents)
+      ? incidents.filter((i) => i.status === "ACTIVE")
+      : [];
+  },
 
-  getCriticalIncidents: () =>
-    get().incidents.filter(
-      (i) => i.severity === "CRITICAL" && i.status === "ACTIVE"
-    ),
+  getCriticalIncidents: () => {
+    const incidents = get().incidents;
+    return Array.isArray(incidents)
+      ? incidents.filter(
+          (i) => i.severity === "CRITICAL" && i.status === "ACTIVE"
+        )
+      : [];
+  },
 }));

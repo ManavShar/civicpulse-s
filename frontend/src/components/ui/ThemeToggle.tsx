@@ -5,11 +5,17 @@ import { motion } from "framer-motion";
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
 
+  const handleClick = () => {
+    console.log("Theme toggle clicked, current theme:", theme);
+    toggleTheme();
+  };
+
   return (
     <button
-      onClick={toggleTheme}
+      onClick={handleClick}
       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors relative"
       aria-label="Toggle theme"
+      type="button"
     >
       <motion.div
         initial={false}

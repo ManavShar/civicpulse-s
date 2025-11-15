@@ -196,8 +196,12 @@ export function getChangedMarkers<T extends { id: string }>(
   removed: T[];
   updated: T[];
 } {
-  const prevMap = new Map(prev.map((m) => [m.id, m]));
-  const nextMap = new Map(next.map((m) => [m.id, m]));
+  // Safety checks: ensure both are arrays
+  const prevArray = Array.isArray(prev) ? prev : [];
+  const nextArray = Array.isArray(next) ? next : [];
+
+  const prevMap = new Map(prevArray.map((m) => [m.id, m]));
+  const nextMap = new Map(nextArray.map((m) => [m.id, m]));
 
   const added: T[] = [];
   const removed: T[] = [];

@@ -65,12 +65,12 @@ export function useReplayData(options: UseReplayDataOptions = {}) {
           signal: abortControllerRef.current.signal,
         });
 
-        const timelineEvents: TimelineEvent[] = response.data.map(
-          (event: any) => ({
-            ...event,
-            timestamp: new Date(event.timestamp),
-          })
-        );
+        // Safety check: ensure response.data is an array
+        const dataArray = Array.isArray(response.data) ? response.data : [];
+        const timelineEvents: TimelineEvent[] = dataArray.map((event: any) => ({
+          ...event,
+          timestamp: new Date(event.timestamp),
+        }));
 
         // Cache the result
         cacheRef.current.set(cacheKey, {

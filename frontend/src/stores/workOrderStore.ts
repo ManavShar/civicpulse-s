@@ -76,6 +76,10 @@ export const useWorkOrderStore = create<WorkOrderState>((set, get) => ({
   // Selectors
   getFilteredWorkOrders: () => {
     const { workOrders, filters } = get();
+
+    // Safety check: ensure workOrders is an array
+    if (!Array.isArray(workOrders)) return [];
+
     let filtered = [...workOrders];
 
     if (filters.status && filters.status.length > 0) {

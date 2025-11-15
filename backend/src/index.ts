@@ -1,9 +1,11 @@
+// Load environment variables FIRST before any other imports
+import "./config/env";
+
 import express, { Application } from "express";
 import { createServer, Server as HTTPServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
-import dotenv from "dotenv";
 import logger from "./utils/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { loggingMiddleware } from "./middleware/loggingMiddleware";
@@ -26,11 +28,10 @@ import {
   scenarioService,
 } from "./services";
 
-// Load environment variables
-dotenv.config();
+import { config } from "./config/env";
 
-const PORT = process.env.PORT || 3001;
-const NODE_ENV = process.env.NODE_ENV || "development";
+const PORT = config.port;
+const NODE_ENV = config.nodeEnv;
 
 /**
  * Create and configure Express application

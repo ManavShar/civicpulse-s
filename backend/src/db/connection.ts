@@ -1,3 +1,5 @@
+// Load environment variables first
+import "../config/env";
 import { Pool, PoolClient, PoolConfig } from "pg";
 import logger from "../utils/logger";
 

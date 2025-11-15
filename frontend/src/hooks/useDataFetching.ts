@@ -105,17 +105,22 @@ export function useDataFetching() {
         const workOrders = useWorkOrderStore.getState().workOrders;
         const predictions = usePredictionStore.getState().predictions;
 
+        // Safety checks for arrays
+        const incidentsArray = Array.isArray(incidents) ? incidents : [];
+        const workOrdersArray = Array.isArray(workOrders) ? workOrders : [];
+        const predictionsArray = Array.isArray(predictions) ? predictions : [];
+
         const metrics = {
-          activeIncidents: incidents.filter((i) => i.status === "ACTIVE")
+          activeIncidents: incidentsArray.filter((i) => i.status === "ACTIVE")
             .length,
-          criticalIncidents: incidents.filter(
+          criticalIncidents: incidentsArray.filter(
             (i) => i.severity === "CRITICAL" && i.status === "ACTIVE"
           ).length,
-          activePredictions: predictions.length,
-          activeWorkOrders: workOrders.filter((wo) =>
+          activePredictions: predictionsArray.length,
+          activeWorkOrders: workOrdersArray.filter((wo) =>
             ["CREATED", "ASSIGNED", "IN_PROGRESS"].includes(wo.status)
           ).length,
-          overallRiskLevel: calculateRiskLevel(incidents),
+          overallRiskLevel: calculateRiskLevel(incidentsArray),
           zoneStatus: {
             healthy: 0,
             warning: 0,
@@ -138,9 +143,11 @@ export function useDataFetching() {
 }
 
 function calculateRiskLevel(incidents: any[]): number {
-  if (incidents.length === 0) return 0;
+  if (!Array.isArray(incidents) || incidents.length === 0) return 0;
 
   const activeIncidents = incidents.filter((i) => i.status === "ACTIVE");
+  if (activeIncidents.length === 0) return 0;
+
   const avgPriority =
     activeIncidents.reduce((sum, i) => sum + i.priorityScore, 0) /
     activeIncidents.length;

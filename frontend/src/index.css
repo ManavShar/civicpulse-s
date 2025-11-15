@@ -19,7 +19,7 @@ body {
   color: #111827;
 }
 
-body.dark {
+.dark body {
   background-color: #030712;
   color: #f9fafb;
 }

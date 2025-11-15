@@ -1,6 +1,6 @@
 # Multi-stage build for CivicPulse AI Backend
 # Stage 1: Base - Install dependencies
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ COPY . .
 RUN npm run build
 
 # Stage 4: Production - Minimal runtime image
-FROM node:18-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 
