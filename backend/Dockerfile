@@ -1,40 +1,62 @@
+# Multi-stage build for CivicPulse AI Backend
+# Stage 1: Base - Install dependencies
 FROM node:18-alpine AS base
 
 WORKDIR /app
 
-# Install dependencies
+# Copy package files
 COPY package*.json ./
-RUN npm ci
+
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci --prefer-offline --no-audit
+
+# Stage 2: Development
+FROM base AS development
 
 # Copy source code
 COPY . .
 
-# Development stage
-FROM base AS development
+EXPOSE 4000
+
 CMD ["npm", "run", "dev"]
 
-# Build stage
+# Stage 3: Build - Compile TypeScript
 FROM base AS build
+
+# Copy source code
+COPY . .
+
+# Build application
 RUN npm run build
 
-# Production stage
+# Stage 4: Production - Minimal runtime image
 FROM node:18-alpine AS production
 
 WORKDIR /app
 
-# Copy package files and install production dependencies only
-COPY package*.json ./
-RUN npm ci --only=production
+# Install curl for health checks
+RUN apk add --no-cache curl
 
-# Copy built application
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production --prefer-offline --no-audit && \
+    npm cache clean --force
+
+# Copy built application from build stage
 COPY --from=build /app/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 
 USER nodejs
 
 EXPOSE 4000
 
-CMD ["npm", "start"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:4000/health || exit 1
+
+CMD ["node", "dist/index.js"]
