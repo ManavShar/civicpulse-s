@@ -8,9 +8,22 @@ import logger from "./utils/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { loggingMiddleware } from "./middleware/loggingMiddleware";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { apiLimiter } from "./middleware/rateLimiter";
 import healthRoutes from "./routes/health";
+import authRoutes from "./routes/auth";
 import sensorRoutes from "./routes/sensors";
-import { initializeWebSocketService, sensorService } from "./services";
+import incidentRoutes from "./routes/incidents";
+import predictionRoutes from "./routes/predictions";
+import workOrderRoutes from "./routes/workOrders";
+import replayRoutes from "./routes/replay";
+import scenarioRoutes from "./routes/scenarios";
+import {
+  initializeWebSocketService,
+  sensorService,
+  predictionService,
+  workOrderSimulator,
+  scenarioService,
+} from "./services";
 
 // Load environment variables
 dotenv.config();
@@ -58,8 +71,17 @@ function createApp(): Application {
   // Health check routes (no /api prefix for infrastructure endpoints)
   app.use(healthRoutes);
 
+  // Apply rate limiting to all API routes
+  app.use("/api/", apiLimiter);
+
   // API v1 routes
+  app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/sensors", sensorRoutes);
+  app.use("/api/v1/incidents", incidentRoutes);
+  app.use("/api/v1/predictions", predictionRoutes);
+  app.use("/api/v1/work-orders", workOrderRoutes);
+  app.use("/api/v1/replay", replayRoutes);
+  app.use("/api/v1/scenarios", scenarioRoutes);
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);
@@ -106,6 +128,16 @@ async function startServer(): Promise<void> {
       );
     }
 
+    // Initialize prediction service and schedule recurring predictions
+    try {
+      await predictionService.scheduleRecurringPredictions();
+      logger.info("Prediction service initialized with recurring jobs");
+    } catch (error) {
+      logger.warn("Could not schedule recurring predictions", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+
     // Start listening
     httpServer.listen(PORT, () => {
       logger.info("CivicPulse AI Backend started", {
@@ -119,14 +151,20 @@ async function startServer(): Promise<void> {
     // Graceful shutdown handlers
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM signal received: closing HTTP server");
+      await scenarioService.shutdown();
       await sensorService.shutdown();
+      await predictionService.close();
+      await workOrderSimulator.shutdown();
       await wsService.close();
       process.exit(0);
     });
 
     process.on("SIGINT", async () => {
       logger.info("SIGINT signal received: closing HTTP server");
+      await scenarioService.shutdown();
       await sensorService.shutdown();
+      await predictionService.close();
+      await workOrderSimulator.shutdown();
       await wsService.close();
       process.exit(0);
     });

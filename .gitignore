@@ -31,6 +31,7 @@ build/
 .DS_Store
 Thumbs.db
 .kiro/
+*.info
 
 # Logs
 logs/

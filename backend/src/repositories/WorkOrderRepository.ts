@@ -102,13 +102,47 @@ export class WorkOrderRepository extends BaseRepository<WorkOrder> {
   }
 
   /**
-   * Update work order status
+   * Validate state machine transitions
+   * CREATED → ASSIGNED → IN_PROGRESS → COMPLETED
+   *                    ↓
+   *                CANCELLED
+   */
+  private validateStatusTransition(
+    currentStatus: WorkOrderStatus,
+    newStatus: WorkOrderStatus
+  ): boolean {
+    const validTransitions: Record<WorkOrderStatus, WorkOrderStatus[]> = {
+      CREATED: ["ASSIGNED", "CANCELLED"],
+      ASSIGNED: ["IN_PROGRESS", "CANCELLED"],
+      IN_PROGRESS: ["COMPLETED", "CANCELLED"],
+      COMPLETED: [],
+      CANCELLED: [],
+    };
+
+    return validTransitions[currentStatus]?.includes(newStatus) || false;
+  }
+
+  /**
+   * Update work order status with state machine validation
    */
   async updateStatus(
     id: string,
     status: WorkOrderStatus,
     client?: PoolClient
   ): Promise<WorkOrder | null> {
+    // Get current work order to validate transition
+    const currentWorkOrder = await this.findById(id, client);
+    if (!currentWorkOrder) {
+      throw new Error(`Work order ${id} not found`);
+    }
+
+    // Validate state transition
+    if (!this.validateStatusTransition(currentWorkOrder.status, status)) {
+      throw new Error(
+        `Invalid status transition from ${currentWorkOrder.status} to ${status}`
+      );
+    }
+
     const updateData: Partial<WorkOrder> = { status };
 
     // Set timestamps based on status
@@ -135,6 +169,86 @@ export class WorkOrderRepository extends BaseRepository<WorkOrder> {
         assignedUnitId: unitId,
         status: "ASSIGNED",
       } as Partial<WorkOrder>,
+      client
+    );
+  }
+
+  /**
+   * Find work orders with multiple filters
+   */
+  async findWithFilters(
+    filters: {
+      status?: WorkOrderStatus | WorkOrderStatus[];
+      zoneId?: string;
+      assignedUnitId?: string;
+      incidentId?: string;
+      startTime?: Date;
+      endTime?: Date;
+    },
+    client?: PoolClient
+  ): Promise<WorkOrder[]> {
+    const conditions: any[] = [];
+
+    if (filters.status) {
+      if (Array.isArray(filters.status)) {
+        conditions.push({
+          field: "status",
+          operator: "IN",
+          value: filters.status,
+        });
+      } else {
+        conditions.push({
+          field: "status",
+          operator: "=",
+          value: filters.status,
+        });
+      }
+    }
+
+    if (filters.zoneId) {
+      conditions.push({
+        field: "zone_id",
+        operator: "=",
+        value: filters.zoneId,
+      });
+    }
+
+    if (filters.assignedUnitId) {
+      conditions.push({
+        field: "assigned_unit_id",
+        operator: "=",
+        value: filters.assignedUnitId,
+      });
+    }
+
+    if (filters.incidentId) {
+      conditions.push({
+        field: "incident_id",
+        operator: "=",
+        value: filters.incidentId,
+      });
+    }
+
+    if (filters.startTime) {
+      conditions.push({
+        field: "created_at",
+        operator: ">=",
+        value: filters.startTime,
+      });
+    }
+
+    if (filters.endTime) {
+      conditions.push({
+        field: "created_at",
+        operator: "<=",
+        value: filters.endTime,
+      });
+    }
+
+    return this.findAll(
+      conditions,
+      [{ field: "created_at", direction: "DESC" }],
+      undefined,
       client
     );
   }

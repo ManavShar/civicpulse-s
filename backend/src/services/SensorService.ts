@@ -13,6 +13,7 @@ import SensorReadingRepository from "../repositories/SensorReadingRepository";
 import { getWebSocketService } from "./WebSocketService";
 import logger from "../utils/logger";
 import { DEFAULT_SENSOR_CONFIGS } from "../types/sensor-simulation";
+import incidentService from "./IncidentService";
 
 /**
  * SensorService manages all sensor simulations
@@ -257,6 +258,29 @@ export class SensorService {
 
       // Batch insert
       await SensorReadingRepository.batchInsert(dbReadings);
+
+      // Process readings for incident detection
+      // Note: We process the simulated readings since they have all the data we need
+      for (const reading of readingsToInsert) {
+        // Convert to SensorReading format for incident detection
+        const sensorReading = {
+          id: "", // Will be set by database, not needed for detection
+          sensorId: reading.sensorId,
+          timestamp: reading.timestamp,
+          value: reading.value,
+          unit: reading.unit,
+          metadata: reading.metadata,
+          createdAt: new Date(),
+        };
+
+        // Process asynchronously without blocking
+        incidentService.processReading(sensorReading).catch((error) => {
+          logger.error("Error processing reading for incident detection", {
+            sensorId: reading.sensorId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        });
+      }
 
       logger.debug("Flushed sensor readings to database", {
         count: readingsToInsert.length,
