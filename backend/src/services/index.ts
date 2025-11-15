@@ -43,3 +43,6 @@ export { default as incidentService } from "./IncidentService";
 
 export { PredictionService } from "./PredictionService";
 export { default as predictionService } from "./PredictionService";
+
+export { WorkOrderSimulator } from "./WorkOrderSimulator";
+export { default as workOrderSimulator } from "./WorkOrderSimulator";

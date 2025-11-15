@@ -118,7 +118,7 @@ router.post(
  */
 router.post(
   "/generate-batch",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
       await predictionService.generateBatchPredictions();
 
@@ -140,7 +140,7 @@ router.post(
  */
 router.get(
   "/queue/stats",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const stats = await predictionService.getQueueStats();
 

@@ -4,7 +4,6 @@
  */
 
 import { BaseRepository } from "../db/BaseRepository";
-import { WhereCondition } from "../db/queryBuilder";
 import db from "../db/connection";
 import logger from "../utils/logger";
 
@@ -60,7 +59,7 @@ export class PredictionRepository extends BaseRepository<Prediction> {
     try {
       const values = predictions
         .map(
-          (p, i) =>
+          (_p, i) =>
             `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${
               i * 7 + 5
             }, $${i * 7 + 6}, $${i * 7 + 7})`
