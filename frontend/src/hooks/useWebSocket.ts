@@ -5,6 +5,7 @@ import { useIncidentStore } from "@/stores/incidentStore";
 import { useWorkOrderStore } from "@/stores/workOrderStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { useMetricsStore } from "@/stores/metricsStore";
+import { useScenarioStore } from "@/stores/scenarioStore";
 
 export function useWebSocket() {
   const { updateSensorReading } = useSensorStore();
@@ -12,6 +13,7 @@ export function useWebSocket() {
   const { addWorkOrder, updateWorkOrder } = useWorkOrderStore();
   const { addMessage } = useAgentStore();
   const { setMetrics } = useMetricsStore();
+  const { setActiveScenario } = useScenarioStore();
 
   useEffect(() => {
     // Sensor events
@@ -67,6 +69,19 @@ export function useWebSocket() {
       setMetrics(data);
     };
 
+    // Scenario events
+    const handleScenarioStarted = (data: any) => {
+      console.log("Scenario started:", data);
+      if (data.scenario) {
+        setActiveScenario(data.scenario);
+      }
+    };
+
+    const handleScenarioStopped = (data: any) => {
+      console.log("Scenario stopped:", data);
+      setActiveScenario(null);
+    };
+
     // Register event handlers
     wsClient.on("sensor:reading", handleSensorReading);
     wsClient.on("sensor:anomaly", handleSensorAnomaly);
@@ -80,6 +95,8 @@ export function useWebSocket() {
     wsClient.on("agent:dispatched", handleAgentDispatched);
     wsClient.on("agent:explained", handleAgentExplained);
     wsClient.on("metrics:update", handleMetricsUpdate);
+    wsClient.on("scenario:started", handleScenarioStarted);
+    wsClient.on("scenario:stopped", handleScenarioStopped);
 
     // Cleanup
     return () => {
@@ -95,6 +112,8 @@ export function useWebSocket() {
       wsClient.off("agent:dispatched", handleAgentDispatched);
       wsClient.off("agent:explained", handleAgentExplained);
       wsClient.off("metrics:update", handleMetricsUpdate);
+      wsClient.off("scenario:started", handleScenarioStarted);
+      wsClient.off("scenario:stopped", handleScenarioStopped);
     };
   }, [
     updateSensorReading,
@@ -104,6 +123,7 @@ export function useWebSocket() {
     updateWorkOrder,
     addMessage,
     setMetrics,
+    setActiveScenario,
   ]);
 
   return {

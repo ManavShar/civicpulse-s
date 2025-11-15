@@ -8,6 +8,7 @@ import { Predictions } from "./pages/Predictions";
 import { AgentConsole } from "./pages/AgentConsole";
 import { Replay } from "./pages/Replay";
 import { Scenarios } from "./pages/Scenarios";
+import { ScenarioOverlay } from "./components/scenarios";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useDataFetching } from "./hooks/useDataFetching";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -19,6 +20,7 @@ function AppContent() {
 
   return (
     <BrowserRouter>
+      <ScenarioOverlay />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />

@@ -106,6 +106,7 @@ export const apiClient = {
   // Scenarios
   scenarios: {
     getAll: () => api.get("/scenarios"),
+    getStatus: () => api.get("/scenarios/status/current"),
     trigger: (id: string) => api.post(`/scenarios/${id}/trigger`),
     stop: () => api.post("/scenarios/stop"),
   },
