@@ -9,8 +9,41 @@ import logger from "../utils/logger";
 const router = Router();
 
 /**
- * GET /api/v1/sensors
- * Get all sensors
+ * @swagger
+ * /api/v1/sensors:
+ *   get:
+ *     summary: Get all sensors
+ *     description: Retrieve a list of all sensors in the system with their current status and last reading
+ *     tags: [Sensors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of sensors retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sensors:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Sensor'
+ *                 count:
+ *                   type: integer
+ *                   example: 50
+ *       401:
+ *         description: Unauthorized - Invalid or missing JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get("/", async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -40,8 +73,55 @@ router.get("/", async (_req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * GET /api/v1/sensors/:id
- * Get specific sensor details
+ * @swagger
+ * /api/v1/sensors/{id}:
+ *   get:
+ *     summary: Get specific sensor details
+ *     description: Retrieve detailed information about a specific sensor including its configuration and current state
+ *     tags: [Sensors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Sensor ID
+ *     responses:
+ *       200:
+ *         description: Sensor details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Sensor'
+ *                 - type: object
+ *                   properties:
+ *                     config:
+ *                       type: object
+ *                       properties:
+ *                         baseValue:
+ *                           type: number
+ *                         unit:
+ *                           type: string
+ *                         interval:
+ *                           type: integer
+ *                         thresholds:
+ *                           type: object
+ *       404:
+ *         description: Sensor not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -85,8 +165,71 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * GET /api/v1/sensors/:id/readings
- * Get sensor readings
+ * @swagger
+ * /api/v1/sensors/{id}/readings:
+ *   get:
+ *     summary: Get sensor readings
+ *     description: Retrieve historical readings for a specific sensor with optional time range filtering
+ *     tags: [Sensors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Sensor ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *           minimum: 1
+ *           maximum: 1000
+ *         description: Maximum number of readings to return
+ *       - in: query
+ *         name: startTime
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start time for reading range (ISO 8601 format)
+ *       - in: query
+ *         name: endTime
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End time for reading range (ISO 8601 format)
+ *     responses:
+ *       200:
+ *         description: Sensor readings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sensorId:
+ *                   type: string
+ *                   format: uuid
+ *                 readings:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/SensorReading'
+ *                 count:
+ *                   type: integer
+ *       404:
+ *         description: Sensor not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   "/:id/readings",
@@ -139,8 +282,68 @@ router.get(
 );
 
 /**
- * POST /api/v1/sensors/:id/configure
- * Update sensor configuration
+ * @swagger
+ * /api/v1/sensors/{id}/configure:
+ *   post:
+ *     summary: Update sensor configuration
+ *     description: Update the configuration parameters for a sensor simulation
+ *     tags: [Sensors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Sensor ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               baseValue:
+ *                 type: number
+ *                 description: Base value for sensor readings
+ *               anomalyProbability:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 1
+ *                 description: Probability of anomaly injection
+ *               interval:
+ *                 type: integer
+ *                 description: Reading interval in milliseconds
+ *           example:
+ *             baseValue: 50
+ *             anomalyProbability: 0.05
+ *             interval: 10000
+ *     responses:
+ *       200:
+ *         description: Sensor configuration updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 config:
+ *                   type: object
+ *       404:
+ *         description: Sensor not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   "/:id/configure",
@@ -189,8 +392,47 @@ router.post(
 );
 
 /**
- * POST /api/v1/sensors/:id/start
- * Start sensor simulation
+ * @swagger
+ * /api/v1/sensors/{id}/start:
+ *   post:
+ *     summary: Start sensor simulation
+ *     description: Start the data generation simulation for a specific sensor
+ *     tags: [Sensors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Sensor ID
+ *     responses:
+ *       200:
+ *         description: Sensor simulation started successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 sensorId:
+ *                   type: string
+ *                   format: uuid
+ *       404:
+ *         description: Sensor not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   "/:id/start",
@@ -226,8 +468,47 @@ router.post(
 );
 
 /**
- * POST /api/v1/sensors/:id/stop
- * Stop sensor simulation
+ * @swagger
+ * /api/v1/sensors/{id}/stop:
+ *   post:
+ *     summary: Stop sensor simulation
+ *     description: Stop the data generation simulation for a specific sensor
+ *     tags: [Sensors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Sensor ID
+ *     responses:
+ *       200:
+ *         description: Sensor simulation stopped successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 sensorId:
+ *                   type: string
+ *                   format: uuid
+ *       404:
+ *         description: Sensor not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   "/:id/stop",

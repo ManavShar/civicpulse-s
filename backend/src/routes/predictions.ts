@@ -10,8 +10,68 @@ import logger from "../utils/logger";
 const router = Router();
 
 /**
- * GET /api/v1/predictions
- * Get all predictions with optional filters
+ * @swagger
+ * /api/v1/predictions:
+ *   get:
+ *     summary: Get all predictions
+ *     description: Retrieve predictions with optional filtering by sensor, confidence, and time range
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: sensor_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by sensor ID
+ *       - in: query
+ *         name: min_confidence
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *           maximum: 1
+ *         description: Minimum confidence threshold
+ *       - in: query
+ *         name: start_time
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter predictions after this time
+ *       - in: query
+ *         name: end_time
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter predictions before this time
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 1000
+ *           default: 100
+ *         description: Maximum number of results
+ *     responses:
+ *       200:
+ *         description: Predictions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                 predictions:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Prediction'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -55,8 +115,53 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * GET /api/v1/predictions/:sensorId
- * Get predictions for a specific sensor
+ * @swagger
+ * /api/v1/predictions/{sensorId}:
+ *   get:
+ *     summary: Get predictions for a specific sensor
+ *     description: Retrieve all predictions for a given sensor ID
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sensorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Sensor ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 1000
+ *           default: 100
+ *         description: Maximum number of predictions to return
+ *     responses:
+ *       200:
+ *         description: Predictions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sensor_id:
+ *                   type: string
+ *                   format: uuid
+ *                 count:
+ *                   type: integer
+ *                 predictions:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Prediction'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   "/:sensorId",
@@ -85,8 +190,42 @@ router.get(
 );
 
 /**
- * POST /api/v1/predictions/generate/:sensorId
- * Trigger prediction generation for a specific sensor
+ * @swagger
+ * /api/v1/predictions/generate/{sensorId}:
+ *   post:
+ *     summary: Trigger prediction generation for a specific sensor
+ *     description: Queue a prediction generation job for the specified sensor
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sensorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Sensor ID
+ *     responses:
+ *       200:
+ *         description: Prediction generation queued successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Prediction generation queued for sensor abc-123
+ *                 sensor_id:
+ *                   type: string
+ *                   format: uuid
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   "/generate/:sensorId",
@@ -113,8 +252,31 @@ router.post(
 );
 
 /**
- * POST /api/v1/predictions/generate-batch
- * Trigger batch prediction generation for all sensors
+ * @swagger
+ * /api/v1/predictions/generate-batch:
+ *   post:
+ *     summary: Trigger batch prediction generation
+ *     description: Queue prediction generation jobs for all sensors in the system
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Batch prediction generation queued successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Batch prediction generation queued for all sensors
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   "/generate-batch",
@@ -135,8 +297,40 @@ router.post(
 );
 
 /**
- * GET /api/v1/predictions/queue/stats
- * Get prediction queue statistics
+ * @swagger
+ * /api/v1/predictions/queue/stats:
+ *   get:
+ *     summary: Get prediction queue statistics
+ *     description: Retrieve statistics about the prediction job queue (waiting, active, completed, failed)
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Queue statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 waiting:
+ *                   type: integer
+ *                   description: Number of jobs waiting in queue
+ *                 active:
+ *                   type: integer
+ *                   description: Number of jobs currently processing
+ *                 completed:
+ *                   type: integer
+ *                   description: Number of completed jobs
+ *                 failed:
+ *                   type: integer
+ *                   description: Number of failed jobs
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   "/queue/stats",

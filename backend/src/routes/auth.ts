@@ -34,8 +34,74 @@ const ChangePasswordSchema = z.object({
 });
 
 /**
- * POST /api/v1/auth/login
- * Authenticate user and return JWT tokens
+ * @swagger
+ * /api/v1/auth/login:
+ *   post:
+ *     summary: Authenticate user
+ *     description: Authenticate user with email and password, returns JWT access and refresh tokens
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: admin@civicpulse.ai
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                   description: JWT access token
+ *                 refreshToken:
+ *                   type: string
+ *                   description: JWT refresh token
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                       enum: [Admin, Operator, Viewer]
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many login attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   "/login",
@@ -240,8 +306,46 @@ router.post(
 );
 
 /**
- * GET /api/v1/auth/me
- * Get current user information
+ * @swagger
+ * /api/v1/auth/me:
+ *   get:
+ *     summary: Get current user information
+ *     description: Retrieve information about the currently authenticated user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   format: uuid
+ *                 email:
+ *                   type: string
+ *                   format: email
+ *                 role:
+ *                   type: string
+ *                   enum: [Admin, Operator, Viewer]
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   "/me",

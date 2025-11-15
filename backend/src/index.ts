@@ -17,6 +17,7 @@ import predictionRoutes from "./routes/predictions";
 import workOrderRoutes from "./routes/workOrders";
 import replayRoutes from "./routes/replay";
 import scenarioRoutes from "./routes/scenarios";
+import docsRoutes from "./routes/docs";
 import {
   initializeWebSocketService,
   sensorService,
@@ -70,6 +71,9 @@ function createApp(): Application {
 
   // Health check routes (no /api prefix for infrastructure endpoints)
   app.use(healthRoutes);
+
+  // API documentation (no rate limiting for docs)
+  app.use("/api-docs", docsRoutes);
 
   // Apply rate limiting to all API routes
   app.use("/api/", apiLimiter);
