@@ -55,7 +55,7 @@ export function MapContainer({
   onZoneClick,
   onIncidentViewDetails,
   onWorkOrderViewDetails,
-  center = [-122.4194, 37.7749], // Default to San Francisco
+  center = [55.2708, 25.2048], // Default to Dubai, UAE
   zoom = 12,
   showLegend = true,
   showWorkOrders = true,
@@ -183,16 +183,17 @@ export function MapContainer({
           handleMarkerClick(sensor.id, "sensor")
         );
 
+        // Ensure coordinates are in [lng, lat] format
+        const coords = Array.isArray(sensor.location.coordinates)
+          ? sensor.location.coordinates
+          : [sensor.location.coordinates[0], sensor.location.coordinates[1]];
+
         const marker = new mapboxgl.Marker({ element })
-          .setLngLat(sensor.location.coordinates)
+          .setLngLat(coords as [number, number])
           .addTo(map.current!);
 
         markersRef.current.set(markerId, marker);
-        console.log(
-          "Added sensor marker:",
-          markerId,
-          sensor.location.coordinates
-        );
+        console.log("Added sensor marker:", markerId, coords);
       }
     });
 
@@ -227,6 +228,12 @@ export function MapContainer({
 
     // Add or update markers
     incidents.forEach((incident) => {
+      // Check if incident has valid location
+      if (!incident.location || !incident.location.coordinates) {
+        console.warn("Incident missing location:", incident.id);
+        return;
+      }
+
       const markerId = `incident-${incident.id}`;
       const existingMarker = markersRef.current.get(markerId);
 
@@ -243,11 +250,17 @@ export function MapContainer({
           handleMarkerClick(incident.id, "incident")
         );
 
+        // Ensure coordinates are in [lng, lat] format
+        const coords = Array.isArray(incident.location.coordinates)
+          ? incident.location.coordinates
+          : [0, 0]; // Fallback to [0, 0] if invalid
+
         const marker = new mapboxgl.Marker({ element, anchor: "bottom" })
-          .setLngLat(incident.location.coordinates)
+          .setLngLat(coords as [number, number])
           .addTo(map.current!);
 
         markersRef.current.set(markerId, marker);
+        console.log("Added incident marker:", markerId, coords);
       }
     });
   }, [incidents]);

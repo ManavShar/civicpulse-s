@@ -52,7 +52,8 @@ export function PredictionList({ onPredictionSelect }: PredictionListProps) {
     // Filter by time horizon
     if (filters.timeHorizon && filters.timeHorizon !== "all") {
       const now = new Date();
-      const maxHours = parseInt(filters.timeHorizon);
+      // Extract number from string like "1h" -> 1
+      const maxHours = parseInt(filters.timeHorizon.replace(/\D/g, ""));
 
       result = result.filter((pred) => {
         const predicted = new Date(pred.predictedTimestamp);
@@ -145,12 +146,9 @@ export function PredictionList({ onPredictionSelect }: PredictionListProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Filters and Controls */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Predictions
-          </h2>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600 dark:text-gray-400">
               {sortedPredictions.length} prediction

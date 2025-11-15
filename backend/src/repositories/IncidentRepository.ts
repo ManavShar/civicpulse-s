@@ -11,6 +11,68 @@ export class IncidentRepository extends BaseRepository<Incident> {
   }
 
   /**
+   * Override findAll to include ST_AsGeoJSON for location
+   */
+  async findAll(
+    conditions: any[] = [],
+    orderBy: any[] = [],
+    pagination?: any,
+    client?: PoolClient
+  ): Promise<Incident[]> {
+    try {
+      const db = await import("../db/connection");
+      const pool = db.default;
+
+      let query = `
+        SELECT 
+          *,
+          ST_AsGeoJSON(location) as location_geojson
+        FROM ${this.tableName}
+        WHERE 1=1
+      `;
+
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      // Add conditions
+      conditions.forEach((condition) => {
+        query += ` AND ${condition.field} ${condition.operator} $${paramIndex}`;
+        params.push(condition.value);
+        paramIndex++;
+      });
+
+      // Add ordering
+      if (orderBy.length > 0) {
+        query +=
+          " ORDER BY " +
+          orderBy.map((o) => `${o.field} ${o.direction}`).join(", ");
+      }
+
+      // Add pagination
+      if (pagination) {
+        query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(pagination.limit, pagination.offset);
+      }
+
+      let rows: any[];
+      if (client) {
+        const result = await client.query(query, params);
+        rows = result.rows;
+      } else {
+        rows = await pool.query(query, params);
+      }
+
+      return rows.map((row: any) => this.mapRowToEntity(row));
+    } catch (error) {
+      const logger = await import("../utils/logger");
+      logger.default.error(`Error finding all ${this.tableName}`, {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Find active incidents
    */
   async findActive(client?: PoolClient): Promise<Incident[]> {
@@ -180,8 +242,20 @@ export class IncidentRepository extends BaseRepository<Incident> {
   protected mapRowToEntity(row: any): Incident {
     const entity = super.mapRowToEntity(row);
 
-    // Parse location if it's a string
-    if (typeof entity.location === "string") {
+    // Parse location GeoJSON if it exists
+    if (row.location_geojson) {
+      try {
+        const geoJson = JSON.parse(row.location_geojson);
+        entity.location = {
+          type: geoJson.type,
+          coordinates: geoJson.coordinates,
+        };
+      } catch (error) {
+        // If parsing fails, set to null
+        entity.location = null as any;
+      }
+    } else if (typeof entity.location === "string") {
+      // Fallback: parse WKT format
       const locationStr = entity.location as string;
       const match = locationStr.match(/POINT\(([^ ]+) ([^ ]+)\)/);
       if (match) {

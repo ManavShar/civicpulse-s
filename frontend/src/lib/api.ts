@@ -86,6 +86,9 @@ export const apiClient = {
   predictions: {
     getAll: (params?: any) => api.get("/predictions", { params }),
     getBySensor: (sensorId: string) => api.get(`/predictions/${sensorId}`),
+    generate: (sensorId: string) =>
+      api.post(`/predictions/generate/${sensorId}`),
+    generateBatch: () => api.post("/predictions/generate-batch"),
     refresh: () => api.post("/predictions/refresh"),
   },
 

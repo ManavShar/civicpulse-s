@@ -7,7 +7,7 @@ import {
   PredictionDetail,
   PredictionTimeline,
 } from "@/components/predictions";
-import { Modal } from "@/components/ui";
+import { Modal, Button } from "@/components/ui";
 
 export function Predictions() {
   const {
@@ -23,6 +23,7 @@ export function Predictions() {
   const { sensors, getSensorById } = useSensorStore();
 
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch predictions on mount
   useEffect(() => {
@@ -30,7 +31,7 @@ export function Predictions() {
       try {
         setLoading(true);
         const response = await apiClient.predictions.getAll();
-        setPredictions(response.data);
+        setPredictions(response.data.predictions || []);
       } catch (error: any) {
         console.error("Error fetching predictions:", error);
         setError(error.message || "Failed to load predictions");
@@ -41,6 +42,33 @@ export function Predictions() {
 
     fetchPredictions();
   }, [setPredictions, setLoading, setError]);
+
+  const handleGeneratePredictions = async () => {
+    try {
+      setIsGenerating(true);
+      console.log("Generating predictions for all sensors...");
+
+      await apiClient.predictions.generateBatch();
+
+      console.log("Prediction generation started! Refresh in a few moments.");
+      alert(
+        "Prediction generation started! The page will refresh in 5 seconds."
+      );
+
+      // Refresh predictions after a delay
+      setTimeout(async () => {
+        const response = await apiClient.predictions.getAll();
+        setPredictions(response.data.predictions || []);
+      }, 5000);
+    } catch (error: any) {
+      console.error("Error generating predictions:", error);
+      alert(
+        `Failed to generate predictions: ${error.message || "Unknown error"}`
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handlePredictionSelect = (id: string) => {
     setSelectedPrediction(id);
@@ -61,19 +89,42 @@ export function Predictions() {
     : undefined;
 
   return (
-    <div className="h-full flex">
-      {/* Main Content - Prediction List */}
-      <div className="flex-1 overflow-hidden">
-        <PredictionList onPredictionSelect={handlePredictionSelect} />
+    <div className="h-full flex flex-col">
+      {/* Header with Generate Button */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Predictions
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              AI-powered forecasts for sensor readings
+            </p>
+          </div>
+          <Button
+            onClick={handleGeneratePredictions}
+            disabled={isGenerating}
+            variant="primary"
+          >
+            {isGenerating ? "Generating..." : "Generate Predictions"}
+          </Button>
+        </div>
       </div>
 
-      {/* Sidebar - Timeline */}
-      <div className="w-96 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
-        <PredictionTimeline
-          predictions={predictions}
-          sensors={sensors}
-          onPredictionClick={handlePredictionSelect}
-        />
+      <div className="flex-1 flex overflow-hidden">
+        {/* Main Content - Prediction List */}
+        <div className="flex-1 overflow-hidden">
+          <PredictionList onPredictionSelect={handlePredictionSelect} />
+        </div>
+
+        {/* Sidebar - Timeline */}
+        <div className="w-96 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
+          <PredictionTimeline
+            predictions={predictions}
+            sensors={sensors}
+            onPredictionClick={handlePredictionSelect}
+          />
+        </div>
       </div>
 
       {/* Detail Modal */}

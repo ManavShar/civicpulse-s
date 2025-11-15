@@ -72,7 +72,7 @@ export function useDataFetching() {
         // Fetch predictions
         setPredictionLoading(true);
         const predictionsResponse = await apiClient.predictions.getAll();
-        setPredictions(predictionsResponse.data);
+        setPredictions(predictionsResponse.data.predictions || []);
         setPredictionLoading(false);
       } catch (error: any) {
         console.error("Error fetching predictions:", error);
