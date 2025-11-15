@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePredictionStore } from "@/stores/predictionStore";
 import { useSensorStore } from "@/stores/sensorStore";
 import { apiClient } from "@/lib/api";
+import { transformPredictions } from "@/lib/transformers";
 import {
   PredictionList,
   PredictionDetail,
@@ -20,28 +21,37 @@ export function Predictions() {
     getPredictionById,
   } = usePredictionStore();
 
-  const { sensors, getSensorById } = useSensorStore();
+  const { sensors, getSensorById, setSensors } = useSensorStore();
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Fetch predictions on mount
+  // Fetch sensors and predictions on mount
   useEffect(() => {
-    const fetchPredictions = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
+
+        // Fetch sensors first
+        const sensorsResponse = await apiClient.sensors.getAll();
+        setSensors(sensorsResponse.data.sensors || []);
+
+        // Then fetch predictions
         const response = await apiClient.predictions.getAll();
-        setPredictions(response.data.predictions || []);
+        const transformedPredictions = transformPredictions(
+          response.data.predictions || []
+        );
+        setPredictions(transformedPredictions);
       } catch (error: any) {
-        console.error("Error fetching predictions:", error);
-        setError(error.message || "Failed to load predictions");
+        console.error("Error fetching data:", error);
+        setError(error.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPredictions();
-  }, [setPredictions, setLoading, setError]);
+    fetchData();
+  }, [setPredictions, setLoading, setError, setSensors]);
 
   const handleGeneratePredictions = async () => {
     try {
@@ -58,7 +68,10 @@ export function Predictions() {
       // Refresh predictions after a delay
       setTimeout(async () => {
         const response = await apiClient.predictions.getAll();
-        setPredictions(response.data.predictions || []);
+        const transformedPredictions = transformPredictions(
+          response.data.predictions || []
+        );
+        setPredictions(transformedPredictions);
       }, 5000);
     } catch (error: any) {
       console.error("Error generating predictions:", error);
@@ -121,7 +134,7 @@ export function Predictions() {
         <div className="w-96 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
           <PredictionTimeline
             predictions={predictions}
-            sensors={sensors}
+            sensors={Array.isArray(sensors) ? sensors : []}
             onPredictionClick={handlePredictionSelect}
           />
         </div>

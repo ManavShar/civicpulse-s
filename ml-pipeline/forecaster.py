@@ -59,11 +59,18 @@ class TimeSeriesForecaster:
             horizons = settings.forecast_horizons_list
 
         try:
+            # Log the data we received
+            logger.info(f"Received {len(history)} readings for sensor {sensor_id}")
+            if len(history) > 0:
+                logger.debug(f"Sample reading: {history[0]}")
+
             # Prepare data for Prophet
             df = self.preprocessor.prepare_prophet_dataframe(history)
 
             if df is None or len(df) < 50:
-                logger.warning(f"Insufficient data for sensor {sensor_id}")
+                logger.warning(
+                    f"Insufficient data for sensor {sensor_id}: df={'None' if df is None else len(df)} rows"
+                )
                 return []
 
             # Try to load cached model

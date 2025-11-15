@@ -47,8 +47,11 @@ export function PredictionTimeline({
   }, [predictions]);
 
   const getSensorName = (sensorId: string): string => {
+    if (!Array.isArray(sensors)) {
+      return `Sensor ${sensorId?.slice(0, 8) || "Unknown"}`;
+    }
     const sensor = sensors.find((s) => s.id === sensorId);
-    return sensor?.name || `Sensor ${sensorId.slice(0, 8)}`;
+    return sensor?.name || `Sensor ${sensorId?.slice(0, 8) || "Unknown"}`;
   };
 
   return (

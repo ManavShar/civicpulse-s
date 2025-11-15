@@ -34,12 +34,22 @@ export function PredictionList({ onPredictionSelect }: PredictionListProps) {
 
     let result = [...predictions];
 
+    console.log("Filtering predictions:", {
+      total: result.length,
+      filters,
+      samplePrediction: result[0],
+    });
+
     // Filter by sensor type
     if (filters.sensorType) {
+      const beforeCount = result.length;
       result = result.filter((pred) => {
         const sensor = getSensorById(pred.sensorId);
         return sensor?.type === filters.sensorType;
       });
+      console.log(
+        `Sensor type filter (${filters.sensorType}): ${beforeCount} -> ${result.length}`
+      );
     }
 
     // Filter by minimum confidence
@@ -212,7 +222,9 @@ export function PredictionList({ onPredictionSelect }: PredictionListProps) {
           >
             {virtualizer.getVirtualItems().map((virtualItem) => {
               const prediction = sortedPredictions[virtualItem.index];
-              const sensor = getSensorById(prediction.sensorId);
+              const sensor = prediction?.sensorId
+                ? getSensorById(prediction.sensorId)
+                : undefined;
               const historicalData = getHistoricalData();
 
               return (

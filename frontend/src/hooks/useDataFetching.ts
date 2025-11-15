@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { apiClient } from "@/lib/api";
+import { transformPredictions } from "@/lib/transformers";
 import { useSensorStore } from "@/stores/sensorStore";
 import { useIncidentStore } from "@/stores/incidentStore";
 import { useWorkOrderStore } from "@/stores/workOrderStore";
@@ -72,7 +73,10 @@ export function useDataFetching() {
         // Fetch predictions
         setPredictionLoading(true);
         const predictionsResponse = await apiClient.predictions.getAll();
-        setPredictions(predictionsResponse.data.predictions || []);
+        const transformedPredictions = transformPredictions(
+          predictionsResponse.data.predictions || []
+        );
+        setPredictions(transformedPredictions);
         setPredictionLoading(false);
       } catch (error: any) {
         console.error("Error fetching predictions:", error);
