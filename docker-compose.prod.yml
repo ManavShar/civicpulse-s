@@ -1,0 +1,51 @@
+version: '3.8'
+
+# CivicPulse AI - Production Docker Compose Configuration
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: postgres -c max_connections=200 -c shared_buffers=256MB
+
+  redis:
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+
+  backend:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    command: node dist/index.js
+    volumes: []
+
+  agent-runtime:
+    build:
+      target: production
+    restart: always
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --workers 2
+    volumes: []
+
+  ml-pipeline:
+    build:
+      target: production
+    restart: always
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --workers 2
+    volumes: []
+
+  frontend:
+    build:
+      target: production
+    restart: always
+    ports:
+      - "80:80"
+    volumes: []

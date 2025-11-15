@@ -40,12 +40,8 @@ The system consists of four main components:
 git clone <repository-url>
 cd civicpulse-ai
 
-# Copy environment variables
-cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-cp agent-runtime/.env.example agent-runtime/.env
-cp ml-pipeline/.env.example ml-pipeline/.env
+# Run setup script (creates .env files and checks prerequisites)
+./scripts/setup.sh
 
 # Edit .env files with your configuration
 # Required: OPENAI_API_KEY, VITE_MAPBOX_TOKEN
@@ -56,6 +52,15 @@ cp ml-pipeline/.env.example ml-pipeline/.env
 ```bash
 # Start all services
 docker-compose up -d
+
+# Run database migrations
+./scripts/run-migrations.sh
+
+# Load seed data (optional, for demo)
+./scripts/seed-data.sh --quick
+
+# Check service health
+./scripts/health-check.sh
 
 # View logs
 docker-compose logs -f
@@ -70,6 +75,12 @@ The application will be available at:
 - Backend API: http://localhost:4000
 - Agent Runtime: http://localhost:8001
 - ML Pipeline: http://localhost:8002
+
+**Default demo users:**
+
+- Admin: `admin@civicpulse.ai` / `admin123`
+- Operator: `operator@civicpulse.ai` / `operator123`
+- Viewer: `viewer@civicpulse.ai` / `viewer123`
 
 ### 3. Local Development
 
@@ -144,14 +155,80 @@ civicpulse-ai/
 └── README.md
 ```
 
-### Scripts
+### Deployment Scripts
 
-Root level:
+See [scripts/README.md](scripts/README.md) for detailed documentation.
+
+Available scripts:
+
+- `./scripts/setup.sh` - Initial project setup
+- `./scripts/start-dev.sh` - Start development environment
+- `./scripts/deploy-prod.sh` - Deploy to production
+- `./scripts/run-migrations.sh` - Run database migrations
+- `./scripts/seed-data.sh` - Load seed data
+- `./scripts/health-check.sh` - Check service health
+- `./scripts/verify-structure.sh` - Verify project structure
+
+Root level npm scripts:
 
 - `npm run dev`: Start all services in development mode
 - `npm run build`: Build all services
 - `npm run docker:up`: Start Docker Compose services
 - `npm run docker:down`: Stop Docker Compose services
+
+## Deployment
+
+### Production Deployment
+
+```bash
+# 1. Configure production environment
+cp .env.example .env
+# Edit .env with production values (strong passwords, production URLs)
+
+# 2. Deploy with production configuration
+./scripts/deploy-prod.sh
+
+# 3. Monitor service health
+./scripts/health-check.sh --watch
+```
+
+The production deployment uses:
+
+- Multi-stage Docker builds for optimized image sizes
+- Non-root users for security
+- Health checks for all services
+- Resource limits and logging configuration
+- Separate production docker-compose configuration
+
+### Docker Compose Profiles
+
+**Development mode** (with hot-reload):
+
+```bash
+docker-compose up -d
+```
+
+**Production mode** (optimized builds):
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+### Database Management
+
+```bash
+# Run migrations
+./scripts/run-migrations.sh
+
+# Load seed data
+./scripts/seed-data.sh
+
+# Reset and reseed database
+./scripts/seed-data.sh --reset
+
+# Quick demo setup
+./scripts/seed-data.sh --quick
+```
 
 ## API Documentation
 

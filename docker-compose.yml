@@ -1,122 +1,232 @@
 version: '3.8'
 
+# CivicPulse AI - Docker Compose Configuration
+# Orchestrates all services for local development and production deployment
+
+networks:
+  civicpulse-network:
+    driver: bridge
+    name: civicpulse-network
+
+volumes:
+  postgres_data:
+    name: civicpulse-postgres-data
+  redis_data:
+    name: civicpulse-redis-data
+  ml_models:
+    name: civicpulse-ml-models
+
 services:
+  # PostgreSQL Database with PostGIS extension
   postgres:
     image: postgis/postgis:16-3.4
     container_name: civicpulse-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-civicpulse}
       POSTGRES_USER: ${POSTGRES_USER:-civicpulse}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-civicpulse_dev}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - civicpulse-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U civicpulse"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-civicpulse} -d ${POSTGRES_DB:-civicpulse}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Redis Cache and Message Broker
   redis:
     image: redis:7-alpine
     container_name: civicpulse-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - civicpulse-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Backend API Service (Node.js/TypeScript)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+      args:
+        NODE_ENV: ${NODE_ENV:-development}
     container_name: civicpulse-backend
+    restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${BACKEND_PORT:-4000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-civicpulse}:${POSTGRES_PASSWORD:-civicpulse_dev}@postgres:5432/${POSTGRES_DB:-civicpulse}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-dev_secret_change_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       AGENT_SERVICE_URL: http://agent-runtime:8001
       ML_SERVICE_URL: http://ml-pipeline:8002
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
     ports:
-      - "4000:4000"
+      - "${BACKEND_PORT:-4000}:4000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - civicpulse-network
     volumes:
       - ./backend:/app
       - /app/node_modules
-    command: npm run dev
+      - /app/dist
+    command: ${BACKEND_COMMAND:-npm run dev}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Agent Runtime Service (Python/LangChain)
   agent-runtime:
     build:
       context: ./agent-runtime
       dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
     container_name: civicpulse-agent-runtime
+    restart: unless-stopped
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4}
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://${POSTGRES_USER:-civicpulse}:${POSTGRES_PASSWORD:-civicpulse_dev}@postgres:5432/${POSTGRES_DB:-civicpulse}
       BACKEND_URL: http://backend:4000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "8001:8001"
+      - "${AGENT_PORT:-8001}:8001"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - civicpulse-network
     volumes:
       - ./agent-runtime:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    command: ${AGENT_COMMAND:-uvicorn main:app --host 0.0.0.0 --port 8001 --reload}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # ML Pipeline Service (Python/Prophet)
   ml-pipeline:
     build:
       context: ./ml-pipeline
       dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
     container_name: civicpulse-ml-pipeline
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-civicpulse}:${POSTGRES_PASSWORD:-civicpulse_dev}@postgres:5432/${POSTGRES_DB:-civicpulse}
       REDIS_URL: redis://redis:6379
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MODEL_CACHE_DIR: /app/models
     ports:
-      - "8002:8002"
+      - "${ML_PORT:-8002}:8002"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - civicpulse-network
     volumes:
       - ./ml-pipeline:/app
       - ml_models:/app/models
-    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
+    command: ${ML_COMMAND:-uvicorn main:app --host 0.0.0.0 --port 8002 --reload}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Frontend Application (React/Vite)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
+      target: ${BUILD_TARGET:-development}
     container_name: civicpulse-frontend
+    restart: unless-stopped
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
       VITE_WS_URL: ${VITE_WS_URL:-http://localhost:4000}
       VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
+    networks:
+      - civicpulse-network
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: npm run dev
-
-volumes:
-  postgres_data:
-  redis_data:
-  ml_models:
+      - /app/dist
+    command: ${FRONTEND_COMMAND:-npm run dev -- --host}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
