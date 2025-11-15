@@ -204,7 +204,7 @@ async function reseedDatabase(options: {
 }): Promise<void> {
   const {
     skipReset = false,
-    historicalDays = 7,
+    historicalDays = 7, // 7 days with hourly intervals (optimized for cloud storage)
     skipValidation = false,
   } = options;
 
@@ -277,7 +277,7 @@ function parseArgs(): {
   const args = process.argv.slice(2);
   const options = {
     skipReset: false,
-    historicalDays: 7,
+    historicalDays: 7, // 7 days with hourly intervals (optimized for cloud storage)
     skipValidation: false,
     help: false,
   };
@@ -320,8 +320,11 @@ Options:
 
 Examples:
   npm run seed                    # Full reset and seed with 7 days of data
+  npm run seed -- --days 1        # Reset and seed with 1 day of data (minimal)
   npm run seed -- --days 14       # Reset and seed with 14 days of data
   npm run seed -- --skip-reset    # Append data without resetting
+
+Note: Uses hourly intervals (optimized for 512MB cloud storage limit)
 
 Environment Variables:
   DATABASE_URL         PostgreSQL connection string (required)

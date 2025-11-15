@@ -137,6 +137,7 @@ async function generateHistoricalReadings(
 
   try {
     console.log(`\nGenerating ${days} days of historical sensor readings...`);
+    console.log(`⚠️  Using reduced data mode for cloud storage optimization`);
 
     const now = new Date();
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
@@ -145,15 +146,29 @@ async function generateHistoricalReadings(
     const batchSize = 1000;
     let batch: any[] = [];
 
-    for (const sensor of sensors) {
-      const intervalMs = sensor.config.interval;
-      const readingsPerDay = (24 * 60 * 60 * 1000) / intervalMs;
-      const totalReadingsForSensor = Math.floor(readingsPerDay * days);
+    // OPTIMIZED DATA MODE: Target ~100K total readings for demo
+    // With 50 sensors over 7 days, we need ~2000 readings per sensor
+    // This means readings every ~5 minutes (288 per day)
+    const DEMO_INTERVAL_MS = 5 * 60 * 1000; // 5 minute intervals
+    const readingsPerDay = 288; // 288 readings per day (every 5 minutes)
+    const maxReadingsPerSensor = readingsPerDay * days; // e.g., 2016 for 7 days
 
+    console.log(
+      `  Generating ~${maxReadingsPerSensor} readings per sensor (5-minute intervals)`
+    );
+    console.log(
+      `  Total expected: ~${
+        sensors.length * maxReadingsPerSensor
+      } readings (~${Math.round(
+        (sensors.length * maxReadingsPerSensor) / 1000
+      )}K)`
+    );
+
+    for (const sensor of sensors) {
       let previousValue: number | undefined;
 
-      for (let i = 0; i < totalReadingsForSensor; i++) {
-        const timestamp = new Date(startDate.getTime() + i * intervalMs);
+      for (let i = 0; i < maxReadingsPerSensor; i++) {
+        const timestamp = new Date(startDate.getTime() + i * DEMO_INTERVAL_MS);
         const { value, isAnomaly } = generateReading(
           sensor,
           timestamp,
@@ -174,7 +189,7 @@ async function generateHistoricalReadings(
           totalReadings += batch.length;
           batch = [];
 
-          if (totalReadings % 10000 === 0) {
+          if (totalReadings % 5000 === 0) {
             console.log(`  Inserted ${totalReadings} readings...`);
           }
         }
@@ -187,7 +202,14 @@ async function generateHistoricalReadings(
       totalReadings += batch.length;
     }
 
-    console.log(`✅ Generated ${totalReadings} historical sensor readings`);
+    console.log(
+      `✅ Generated ${totalReadings.toLocaleString()} historical sensor readings`
+    );
+    console.log(
+      `   (Optimized for demo: ~${Math.round(
+        totalReadings / 1000
+      )}K readings with 5-minute intervals)`
+    );
   } finally {
     client.release();
   }
@@ -575,6 +597,9 @@ export async function seedHistoricalData(days: number = 7): Promise<void> {
 
   try {
     console.log(`\n=== Generating ${days} days of historical data ===`);
+    console.log(
+      `📊 Cloud-optimized mode: Reduced data volume for 512MB storage limit`
+    );
 
     // Get sensors
     const sensorsResult = await client.query(
@@ -604,6 +629,8 @@ export async function seedHistoricalData(days: number = 7): Promise<void> {
       return;
     }
 
+    console.log(`\nFound ${sensors.length} sensors and ${zones.length} zones`);
+
     // Generate historical data
     await generateHistoricalReadings(sensors, days);
     const incidentIds = await generateHistoricalIncidents(sensors, zones, days);
@@ -611,6 +638,11 @@ export async function seedHistoricalData(days: number = 7): Promise<void> {
     await generateHistoricalAgentLogs(incidentIds);
 
     console.log("\n✅ Historical data generation completed successfully!");
+    console.log(
+      `💾 Storage-optimized: ~${Math.round(
+        (sensors.length * 288 * days) / 1000
+      )}K readings (5-min intervals) for demo`
+    );
   } finally {
     client.release();
   }
