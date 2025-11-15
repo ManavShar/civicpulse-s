@@ -153,18 +153,23 @@ export function HeatmapLayer({
 
     return () => {
       // Cleanup on unmount
-      if (map.getLayer(layerId)) {
-        map.removeLayer(layerId);
-      }
-      if (map.getSource(sourceId)) {
-        map.removeSource(sourceId);
+      if (map.isStyleLoaded()) {
+        if (map.getLayer(layerId)) {
+          map.removeLayer(layerId);
+        }
+        if (map.getSource(sourceId)) {
+          map.removeSource(sourceId);
+        }
       }
     };
   }, [map, type, sourceId, layerId]);
 
   // Update heatmap data when readings change
   useEffect(() => {
-    if (!map || !map.getSource(sourceId)) return;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+    if (!source) return;
 
     // Filter readings by sensor type (simplified - in production, match sensor IDs to types)
     const filteredReadings = readings;
@@ -187,7 +192,6 @@ export function HeatmapLayer({
       };
     });
 
-    const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
     source.setData({
       type: "FeatureCollection",
       features,
@@ -196,7 +200,10 @@ export function HeatmapLayer({
 
   // Update visibility
   useEffect(() => {
-    if (!map || !map.getLayer(layerId)) return;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const layer = map.getLayer(layerId);
+    if (!layer) return;
 
     if (visible !== prevVisibleRef.current) {
       map.setLayoutProperty(
@@ -210,7 +217,10 @@ export function HeatmapLayer({
 
   // Update intensity and radius
   useEffect(() => {
-    if (!map || !map.getLayer(layerId)) return;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const layer = map.getLayer(layerId);
+    if (!layer) return;
 
     map.setPaintProperty(layerId, "heatmap-intensity", [
       "interpolate",

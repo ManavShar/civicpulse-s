@@ -136,7 +136,10 @@ export function ZoneOverlay({
 
   // Update zone data
   useEffect(() => {
-    if (!map || !map.getSource(sourceId)) return;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+    if (!source) return;
 
     const features = zones.map((zone) => ({
       type: "Feature" as const,
@@ -149,7 +152,6 @@ export function ZoneOverlay({
       geometry: zone.boundary,
     }));
 
-    const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
     source.setData({
       type: "FeatureCollection",
       features,
@@ -158,7 +160,10 @@ export function ZoneOverlay({
 
   // Update selected zone
   useEffect(() => {
-    if (!map || !map.getSource(sourceId)) return;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const source = map.getSource(sourceId);
+    if (!source) return;
 
     // Clear all selected states
     zones.forEach((zone) => {

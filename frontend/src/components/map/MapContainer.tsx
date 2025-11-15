@@ -148,6 +148,9 @@ export function MapContainer({
   const updateSensorMarkers = useCallback(() => {
     if (!map.current || !clusterRef.current) return;
 
+    // Safety check: ensure sensors is an array
+    const sensorsArray = Array.isArray(sensors) ? sensors : [];
+
     // Get existing sensor marker IDs
     const existingIds = new Set<string>();
     markersRef.current.forEach((_, id) => {
@@ -157,7 +160,7 @@ export function MapContainer({
     });
 
     // Track current sensor IDs
-    const currentIds = new Set(sensors.map((s) => `sensor-${s.id}`));
+    const currentIds = new Set(sensorsArray.map((s) => `sensor-${s.id}`));
 
     // Remove markers that no longer exist
     existingIds.forEach((id) => {
@@ -171,7 +174,7 @@ export function MapContainer({
     });
 
     // Add or update markers
-    sensors.forEach((sensor) => {
+    sensorsArray.forEach((sensor) => {
       const markerId = `sensor-${sensor.id}`;
       const existingMarker = markersRef.current.get(markerId);
 
