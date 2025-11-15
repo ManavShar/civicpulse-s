@@ -54,3 +54,6 @@ export {
   SystemSnapshot,
   TimelineQuery,
 } from "./ReplayService";
+
+export { ScenarioService } from "./ScenarioService";
+export { default as scenarioService } from "./ScenarioService";

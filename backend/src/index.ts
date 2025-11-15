@@ -14,11 +14,13 @@ import incidentRoutes from "./routes/incidents";
 import predictionRoutes from "./routes/predictions";
 import workOrderRoutes from "./routes/workOrders";
 import replayRoutes from "./routes/replay";
+import scenarioRoutes from "./routes/scenarios";
 import {
   initializeWebSocketService,
   sensorService,
   predictionService,
   workOrderSimulator,
+  scenarioService,
 } from "./services";
 
 // Load environment variables
@@ -73,6 +75,7 @@ function createApp(): Application {
   app.use("/api/v1/predictions", predictionRoutes);
   app.use("/api/v1/work-orders", workOrderRoutes);
   app.use("/api/v1/replay", replayRoutes);
+  app.use("/api/v1/scenarios", scenarioRoutes);
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);
@@ -142,6 +145,7 @@ async function startServer(): Promise<void> {
     // Graceful shutdown handlers
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM signal received: closing HTTP server");
+      await scenarioService.shutdown();
       await sensorService.shutdown();
       await predictionService.close();
       await workOrderSimulator.shutdown();
@@ -151,6 +155,7 @@ async function startServer(): Promise<void> {
 
     process.on("SIGINT", async () => {
       logger.info("SIGINT signal received: closing HTTP server");
+      await scenarioService.shutdown();
       await sensorService.shutdown();
       await predictionService.close();
       await workOrderSimulator.shutdown();
