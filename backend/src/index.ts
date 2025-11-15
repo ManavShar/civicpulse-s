@@ -13,6 +13,7 @@ import sensorRoutes from "./routes/sensors";
 import incidentRoutes from "./routes/incidents";
 import predictionRoutes from "./routes/predictions";
 import workOrderRoutes from "./routes/workOrders";
+import replayRoutes from "./routes/replay";
 import {
   initializeWebSocketService,
   sensorService,
@@ -71,6 +72,7 @@ function createApp(): Application {
   app.use("/api/v1/incidents", incidentRoutes);
   app.use("/api/v1/predictions", predictionRoutes);
   app.use("/api/v1/work-orders", workOrderRoutes);
+  app.use("/api/v1/replay", replayRoutes);
 
   // 404 handler for undefined routes
   app.use(notFoundHandler);

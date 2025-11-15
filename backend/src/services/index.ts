@@ -46,3 +46,11 @@ export { default as predictionService } from "./PredictionService";
 
 export { WorkOrderSimulator } from "./WorkOrderSimulator";
 export { default as workOrderSimulator } from "./WorkOrderSimulator";
+
+export {
+  ReplayService,
+  TimelineEvent,
+  TimelineEventType,
+  SystemSnapshot,
+  TimelineQuery,
+} from "./ReplayService";
