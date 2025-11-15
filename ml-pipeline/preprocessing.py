@@ -38,6 +38,9 @@ class TimeSeriesPreprocessor:
             # Convert to DataFrame
             df = pd.DataFrame(readings)
 
+            logger.debug(f"DataFrame columns: {df.columns.tolist()}")
+            logger.debug(f"DataFrame shape: {df.shape}")
+
             # Ensure timestamp is datetime
             df["ds"] = pd.to_datetime(df["timestamp"])
 

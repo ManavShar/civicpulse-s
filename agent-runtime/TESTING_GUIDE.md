@@ -106,7 +106,7 @@ curl http://localhost:8000/health
 curl http://localhost:8000/ready
 
 # Check Backend health
-curl http://localhost:3000/health
+curl http://localhost:4000/health
 ```
 
 ## Testing Methods
@@ -119,10 +119,10 @@ First, you need an incident from the backend:
 
 ```bash
 # List recent incidents
-curl http://localhost:3000/api/v1/incidents | jq '.data[0]'
+curl http://localhost:4000/api/v1/incidents | jq '.data[0]'
 
 # Or create a test incident
-curl -X POST http://localhost:3000/api/v1/incidents \
+curl -X POST http://localhost:4000/api/v1/incidents \
   -H "Content-Type: application/json" \
   -d '{
     "type": "WASTE_OVERFLOW",

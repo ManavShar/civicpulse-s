@@ -8,8 +8,8 @@ import sys
 from typing import Optional
 
 # Configuration
-AGENT_URL = "http://localhost:8000"
-BACKEND_URL = "http://localhost:3000"
+AGENT_URL = "http://localhost:8001"
+BACKEND_URL = "http://localhost:4000"
 
 
 def print_section(title: str):

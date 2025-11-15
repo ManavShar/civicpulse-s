@@ -11,6 +11,7 @@ import { ScoringBreakdown } from "./ScoringBreakdown";
 import { ExplanationCard } from "./ExplanationCard";
 import { format } from "date-fns";
 import { apiClient } from "@/lib/api";
+import { transformPredictions } from "@/lib/transformers";
 
 interface IncidentDetailProps {
   incident: Incident;
@@ -46,7 +47,10 @@ export function IncidentDetail({
           const predictionResponse = await apiClient.predictions.getBySensor(
             incident.sensorId
           );
-          setPredictions(predictionResponse.data);
+          const transformedPredictions = transformPredictions(
+            predictionResponse.data || []
+          );
+          setPredictions(transformedPredictions);
         }
 
         // Fetch work orders for this incident

@@ -137,7 +137,7 @@ class Database:
                 zone_id,
                 metadata
             FROM sensors
-            WHERE metadata->>'status' != 'offline'
+            WHERE status != 'offline'
             ORDER BY created_at
         """
 

@@ -78,10 +78,22 @@ export const useSensorStore = create<SensorState>((set, get) => ({
   setError: (error) => set({ error }),
 
   // Selectors
-  getSensorById: (id) => get().sensors.find((s) => s.id === id),
+  getSensorById: (id) => {
+    const sensors = get().sensors;
+    return Array.isArray(sensors)
+      ? sensors.find((s) => s.id === id)
+      : undefined;
+  },
 
-  getSensorsByType: (type) => get().sensors.filter((s) => s.type === type),
+  getSensorsByType: (type) => {
+    const sensors = get().sensors;
+    return Array.isArray(sensors) ? sensors.filter((s) => s.type === type) : [];
+  },
 
-  getSensorsByZone: (zoneId) =>
-    get().sensors.filter((s) => s.zoneId === zoneId),
+  getSensorsByZone: (zoneId) => {
+    const sensors = get().sensors;
+    return Array.isArray(sensors)
+      ? sensors.filter((s) => s.zoneId === zoneId)
+      : [];
+  },
 }));

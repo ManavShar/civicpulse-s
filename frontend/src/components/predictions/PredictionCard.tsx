@@ -27,8 +27,9 @@ export function PredictionCard({
 
   // Determine confidence level color
   const confidenceColor = useMemo(() => {
-    if (prediction.confidence >= 0.8) return "success";
-    if (prediction.confidence >= 0.6) return "warning";
+    const confidence = prediction.confidence ?? 0;
+    if (confidence >= 0.8) return "success";
+    if (confidence >= 0.6) return "warning";
     return "danger";
   }, [prediction.confidence]);
 
@@ -36,11 +37,14 @@ export function PredictionCard({
   const isWarning = useMemo(() => {
     // This would be based on threshold logic from the backend
     // For now, we'll use a simple heuristic
-    return prediction.confidence > 0.7 && prediction.predictedValue > 80;
-  }, [prediction]);
+    const confidence = prediction.confidence ?? 0;
+    const predictedValue = prediction.predictedValue ?? 0;
+    return confidence > 0.7 && predictedValue > 80;
+  }, [prediction.confidence, prediction.predictedValue]);
 
   // Format time horizon
   const timeHorizon = useMemo(() => {
+    if (!prediction.predictedTimestamp) return 0;
     const now = new Date();
     const predicted = new Date(prediction.predictedTimestamp);
     const diffHours = Math.round(
@@ -74,7 +78,8 @@ export function PredictionCard({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {sensor?.name || `Sensor ${prediction.sensorId.slice(0, 8)}`}
+              {sensor?.name ||
+                `Sensor ${prediction.sensorId?.slice(0, 8) || "Unknown"}`}
             </h3>
             {isWarning && (
               <Badge variant="warning" size="sm">
@@ -83,7 +88,15 @@ export function PredictionCard({
             )}
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {sensor?.type.replace("_", " ") || "Unknown Type"}
+            {(() => {
+              console.log("Sensor data:", {
+                sensor,
+                sensorId: prediction.sensorId,
+              });
+              return sensor?.type
+                ? sensor.type.replace(/_/g, " ")
+                : "Unknown Type";
+            })()}
           </p>
         </div>
         <Badge variant={confidenceColor} size="md">
@@ -97,7 +110,12 @@ export function PredictionCard({
             Predicted Value
           </p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {prediction.predictedValue.toFixed(1)}
+            {prediction.predictedValue?.toFixed(1) ?? "N/A"}
+            {sensor?.metadata?.unit && (
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
+                {sensor.metadata.unit}
+              </span>
+            )}
           </p>
         </div>
         <div>
@@ -111,7 +129,7 @@ export function PredictionCard({
       </div>
 
       {/* Mini trend chart */}
-      {historicalData.length > 0 && (
+      {historicalData.length > 0 && prediction.predictedValue != null && (
         <div className="mb-3">
           <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Trend</p>
           <div className="h-12 w-full">
@@ -127,13 +145,15 @@ export function PredictionCard({
       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
         <span>
           Predicted{" "}
-          {formatDistanceToNow(new Date(prediction.predictedTimestamp), {
-            addSuffix: true,
-          })}
+          {prediction.predictedTimestamp
+            ? formatDistanceToNow(new Date(prediction.predictedTimestamp), {
+                addSuffix: true,
+              })
+            : "N/A"}
         </span>
         <span>
-          Range: {prediction.lowerBound.toFixed(1)} -{" "}
-          {prediction.upperBound.toFixed(1)}
+          Range: {prediction.lowerBound?.toFixed(1) ?? "N/A"} -{" "}
+          {prediction.upperBound?.toFixed(1) ?? "N/A"}
         </span>
       </div>
     </div>
