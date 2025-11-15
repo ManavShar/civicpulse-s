@@ -29,6 +29,9 @@ export function PredictionList({ onPredictionSelect }: PredictionListProps) {
 
   // Filter predictions
   const filteredPredictions = useMemo(() => {
+    // Safety check: ensure predictions is an array
+    if (!Array.isArray(predictions)) return [];
+
     let result = [...predictions];
 
     // Filter by sensor type

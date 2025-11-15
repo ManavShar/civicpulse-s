@@ -31,13 +31,16 @@ export function SystemMetrics({
       low: 0,
     };
 
-    incidents.forEach((incident) => {
-      const severity =
-        incident.severity.toLowerCase() as keyof SeverityBreakdown;
-      if (severity in breakdown) {
-        breakdown[severity]++;
-      }
-    });
+    // Safety check: ensure incidents is an array
+    if (Array.isArray(incidents)) {
+      incidents.forEach((incident) => {
+        const severity =
+          incident.severity.toLowerCase() as keyof SeverityBreakdown;
+        if (severity in breakdown) {
+          breakdown[severity]++;
+        }
+      });
+    }
 
     return breakdown;
   }, [incidents]);

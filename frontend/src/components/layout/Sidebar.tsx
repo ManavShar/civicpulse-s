@@ -110,10 +110,10 @@ export function Sidebar({
               end={item.to === "/"}
               className={({ isActive }) =>
                 clsx(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+                  "flex items-center gap-3 py-2 rounded-lg transition-colors border-l-4",
                   isActive
-                    ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    ? "bg-primary-100 dark:bg-primary-600/30 text-primary-700 dark:text-primary-200 font-semibold border-primary-600 dark:border-primary-400 pl-2 pr-3"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border-transparent px-3"
                 )
               }
             >

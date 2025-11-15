@@ -1,10 +1,18 @@
+import { useMemo } from "react";
 import { MapPerformanceWrapper } from "@/components/map";
 import { useSensorStore } from "@/stores/sensorStore";
 import { useIncidentStore } from "@/stores/incidentStore";
 
 export function MapView() {
   const sensors = useSensorStore((state) => state.sensors);
-  const incidents = useIncidentStore((state) => state.getActiveIncidents());
+  const allIncidents = useIncidentStore((state) => state.incidents);
+
+  // Filter active incidents with useMemo to avoid infinite loop
+  const incidents = useMemo(() => {
+    return Array.isArray(allIncidents)
+      ? allIncidents.filter((i) => i.status === "ACTIVE")
+      : [];
+  }, [allIncidents]);
 
   const handleMarkerClick = (id: string, type: "sensor" | "incident") => {
     console.log(`Clicked ${type}:`, id);

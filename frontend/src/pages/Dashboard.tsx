@@ -28,7 +28,9 @@ export function Dashboard() {
       : [];
 
   // Get sample predictions for chart (first 10)
-  const samplePredictions = predictions.slice(0, 10);
+  const samplePredictions = Array.isArray(predictions)
+    ? predictions.slice(0, 10)
+    : [];
 
   return (
     <DashboardLayout>

@@ -51,17 +51,27 @@ export const useSensorStore = create<SensorState>((set, get) => ({
   setSelectedSensor: (id) => set({ selectedSensorId: id }),
 
   updateSensorReading: (reading) =>
-    set((state) => ({
-      sensors: state.sensors.map((sensor) =>
-        sensor.id === reading.sensorId
-          ? {
-              ...sensor,
-              currentValue: reading.value,
-              lastReading: reading,
-            }
-          : sensor
-      ),
-    })),
+    set((state) => {
+      if (!Array.isArray(state.sensors)) return { sensors: [] };
+
+      // Check if sensor exists and value actually changed
+      const sensor = state.sensors.find((s) => s.id === reading.sensorId);
+      if (!sensor || sensor.currentValue === reading.value) {
+        return state; // No update needed
+      }
+
+      return {
+        sensors: state.sensors.map((s) =>
+          s.id === reading.sensorId
+            ? {
+                ...s,
+                currentValue: reading.value,
+                lastReading: reading,
+              }
+            : s
+        ),
+      };
+    }),
 
   setLoading: (loading) => set({ loading }),
 

@@ -4,7 +4,7 @@
  */
 import axios from "axios";
 
-const BASE_URL = "http://localhost:3001";
+const BASE_URL = "http://localhost:4000";
 
 async function testServer() {
   console.log("Testing CivicPulse Backend Server...\n");
